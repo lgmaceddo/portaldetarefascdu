@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Task, TaskStatus, Priority } from '../../types';
+import { Task, TaskStatus, Priority } from '../types';
 
 const mockTasks: Task[] = [
     {
@@ -209,8 +209,8 @@ const Tasks: React.FC = () => {
                             key={status}
                             onClick={() => setFilter(status as any)}
                             className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filter === status
-                                    ? 'bg-primary text-white shadow-md'
-                                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                                ? 'bg-primary text-white shadow-md'
+                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                                 }`}
                         >
                             {label}
@@ -500,8 +500,8 @@ const Tasks: React.FC = () => {
                                     {/* Right Column: Patient Toggle & Data (5 cols) */}
                                     <div className="lg:col-span-5 flex flex-col">
                                         <div className={`rounded-2xl border transition-all duration-300 h-full overflow-hidden flex flex-col ${formData.isPatientRelated
-                                                ? 'bg-white border-primary/30 shadow-lg shadow-primary/5'
-                                                : 'bg-gray-50 border-gray-200'
+                                            ? 'bg-white border-primary/30 shadow-lg shadow-primary/5'
+                                            : 'bg-gray-50 border-gray-200'
                                             }`}>
                                             <div
                                                 className="p-5 flex items-center justify-between cursor-pointer border-b border-gray-100"

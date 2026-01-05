@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Receptionist } from '../../types';
+import { Receptionist } from '../types';
 import { supabase } from '../services/supabase';
 
 const Receptionists: React.FC = () => {
@@ -65,12 +65,21 @@ const Receptionists: React.FC = () => {
 
     // --- Design Helpers ---
 
+    const getInitials = (name: string) => {
+        const cleanName = name.trim();
+        const parts = cleanName.split(' ');
+
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+
     const getSectorColor = (sector: string) => {
-        const s = sector.toLowerCase();
-        if (s.includes('administrativo') || s.includes('financeiro')) return 'bg-blue-100 text-blue-700 border-blue-200';
-        if (s.includes('recepção') || s.includes('atendimento')) return 'bg-green-100 text-green-700 border-green-200';
-        if (s.includes('triagem') || s.includes('enfermagem')) return 'bg-red-100 text-red-700 border-red-200';
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+        // Keep sector color logic for badge if needed, OR remove if copying Professional style completely
+        // Professional uses plain text under name. I'll stick to Professional style (plain text) to be "Standardized".
+        // But for Reception, distinct sectors might be useful.
+        // User asked to "padronizar igual". Professionals shows Specialty as gray uppercase text.
+        // I will do the same for Sector.
+        return 'text-gray-500';
     };
 
     const getStatusDotColor = (status: string) => {
@@ -101,55 +110,55 @@ const Receptionists: React.FC = () => {
                             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-white"
                         />
                     </div>
-                    {/* Read-Only: No Add Button */}
                 </div>
             </div>
 
-            {/* Grid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
+            {/* Grid Layout: Same as Professionals */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 pb-6">
                 {filtered.map(receptionist => (
                     <div
                         key={receptionist.id}
-                        className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col border border-gray-100"
+                        className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col border border-gray-100 border-l-[6px] border-l-secondary"
                     >
-                        <div className="p-5 flex flex-col gap-4 h-full">
+                        <div className="p-4 flex flex-col gap-3 h-full">
+                            {/* Header: Initials + Name */}
                             <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-center gap-3 overflow-hidden">
-                                    {/* Initials & Status */}
-                                    <div className="size-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-lg relative shrink-0">
+                                    {/* Initials Circle - Using Secondary Color Theme for Reception */}
+                                    <div className="size-11 shrink-0 rounded-full flex items-center justify-center font-bold text-sm tracking-widest bg-orange-50 text-orange-600 relative">
                                         {receptionist.avatar ? (
                                             <img src={receptionist.avatar} alt={receptionist.name} className="w-full h-full object-cover rounded-full" />
                                         ) : (
-                                            receptionist.name.substring(0, 2).toUpperCase()
+                                            getInitials(receptionist.name)
                                         )}
-                                        <div className={`absolute bottom-0 right-0 size-3.5 rounded-full border-2 border-white ${getStatusDotColor(receptionist.status)}`}></div>
+                                        <div className={`absolute bottom-0 right-0 size-3 rounded-full border-2 border-white ${getStatusDotColor(receptionist.status)}`}></div>
                                     </div>
 
-                                    {/* Info */}
+                                    {/* Name & Sector */}
                                     <div className="min-w-0">
-                                        <h3 className="font-bold text-gray-800 text-base leading-tight truncate" title={receptionist.name}>
+                                        <h3 className="font-bold text-gray-800 text-sm leading-tight truncate" title={receptionist.name}>
                                             {receptionist.name}
                                         </h3>
-                                        <div className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${getSectorColor(receptionist.sector)}`}>
+                                        {/* Standardized 'Specialty/Sector' look */}
+                                        <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wide mt-0.5 truncate">
                                             {receptionist.sector}
-                                        </div>
+                                        </p>
                                     </div>
                                 </div>
-                                {/* Actions Removed for Read-Only */}
                             </div>
 
-                            {/* Contact Info */}
-                            <div className="mt-auto pt-3 border-t border-gray-50">
+                            {/* Footer: Phone */}
+                            <div className="mt-auto pt-3 border-t border-gray-50 flex items-center justify-between">
                                 {receptionist.phone ? (
                                     <a
                                         href={`tel:${receptionist.phone}`}
-                                        className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-primary transition-colors bg-gray-50 px-3 py-2 rounded-lg"
+                                        className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-secondary transition-colors bg-gray-50 px-2 py-1.5 rounded-lg w-full"
                                     >
-                                        <span className="material-symbols-outlined text-sm">call</span>
+                                        <span className="material-symbols-outlined text-sm text-secondary">call</span>
                                         {receptionist.phone}
                                     </a>
                                 ) : (
-                                    <span className="text-[10px] text-gray-400 italic">Sem telefone cadastrado</span>
+                                    <span className="text-[10px] text-gray-400 italic px-2 py-1.5">Sem contato</span>
                                 )}
                             </div>
                         </div>

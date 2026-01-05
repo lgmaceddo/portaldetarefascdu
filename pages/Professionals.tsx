@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Doctor } from '../../types';
+import { Doctor } from '../types';
 import { supabase } from '../services/supabase';
 
 // Mock data

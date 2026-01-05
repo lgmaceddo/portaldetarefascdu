@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Doctor, Receptionist } from '../../types';
+import { Doctor, Receptionist } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 import { supabase } from '../services/supabase';
@@ -180,6 +180,52 @@ const Users: React.FC = () => {
     };
 
     // --- Helpers ---
+    const getInitials = (name: string) => {
+        const cleanName = name.replace(/^(dr|dra|dr\.|dra\.)\s+/i, '').trim();
+        const parts = cleanName.split(' ');
+
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+
+    const getStyleByRole = (role: 'doctor' | 'reception', name: string) => {
+        // Reception always Orange
+        if (role === 'reception') {
+            return {
+                bg: 'bg-orange-50',
+                text: 'text-orange-600',
+                borderLeft: 'border-l-orange-400',
+                iconText: 'text-orange-600'
+            };
+        }
+
+        // Doctors: Purple for Dra., Green (Primary) for Dr.
+        const isFemale = name.toLowerCase().startsWith('dra');
+        if (isFemale) {
+            return {
+                bg: 'bg-purple-50',
+                text: 'text-purple-700',
+                borderLeft: 'border-l-purple-400',
+                iconText: 'text-purple-600'
+            };
+        }
+        return {
+            bg: 'bg-primary-light',
+            text: 'text-primary-dark',
+            borderLeft: 'border-l-primary',
+            iconText: 'text-primary'
+        };
+    };
+
+    const getStatusDotColor = (status: string) => {
+        switch (status) {
+            case 'active': return 'bg-green-500';
+            case 'inactive': return 'bg-gray-300';
+            case 'vacation': return 'bg-yellow-400';
+            default: return 'bg-gray-300';
+        }
+    };
+
     const filteredUsers = users.filter(u => {
         const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
             u.roleDisplay.toLowerCase().includes(search.toLowerCase());
@@ -256,92 +302,105 @@ const Users: React.FC = () => {
                 </div>
             </div>
 
-            {/* Users List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-10">
-                {filteredUsers.map(u => (
-                    <div
-                        key={u.id}
-                        className={`bg-white rounded-xl border transition-all hover:shadow-lg relative overflow-hidden group ${u.isAdmin ? 'border-primary/40 shadow-sm' : 'border-gray-200'
-                            }`}
-                    >
-                        {/* Admin Banner */}
-                        {u.isAdmin && (
-                            <div className="bg-primary/10 text-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-center border-b border-primary/10 flex items-center justify-center gap-1">
-                                <span className="material-symbols-outlined text-xs">verified_user</span>
-                                Administrador
-                            </div>
-                        )}
+            {/* Users List - Standardized Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 pb-10">
+                {filteredUsers.map(u => {
+                    const style = getStyleByRole(u.roleType, u.name);
 
-                        <div className="p-5">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className={`size-3 rounded-full shrink-0 ${u.status === 'online' ? 'bg-green-500' :
-                                            u.status === 'active' ? 'bg-green-500' :
-                                                u.status === 'vacation' ? 'bg-yellow-400' : 'bg-gray-300'
-                                            }`} title={`Status: ${u.status}`}></div>
-                                        <h3 className="font-bold text-gray-800 text-lg truncate pr-2" title={u.name}>{u.name}</h3>
-                                    </div>
+                    return (
+                        <div
+                            key={u.id}
+                            className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col border border-gray-100 border-l-[6px] ${style.borderLeft}`}
+                        >
+                            {/* Admin Banner */}
+                            {u.isAdmin && (
+                                <div className="absolute top-0 right-0 bg-primary text-white px-2 py-0.5 rounded-bl-lg text-[9px] font-bold uppercase tracking-widest z-10 shadow-sm flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[10px]">verified_user</span>
+                                    Admin
+                                </div>
+                            )}
 
-                                    {/* Toggle Switch */}
-                                    <div className="flex items-center" title="Promover a Admin">
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={u.isAdmin}
-                                                onChange={() => toggleAdmin(u.id, u.isAdmin)}
-                                                disabled={u.id === currentUser?.id}
-                                            />
-                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                                        </label>
+                            <div className="p-4 flex flex-col gap-3 h-full pt-6"> {/* Increased top padding for Admin banner space */}
+
+                                {/* Header: Initials + Name */}
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3 overflow-hidden w-full">
+                                        {/* Initials Circle */}
+                                        <div className={`size-11 shrink-0 rounded-full flex items-center justify-center font-bold text-sm tracking-widest ${style.bg} ${style.text} relative`}>
+                                            {u.avatar ? (
+                                                <img src={u.avatar} alt={u.name} className="w-full h-full object-cover rounded-full" />
+                                            ) : (
+                                                getInitials(u.name)
+                                            )}
+                                            {/* Status Dot */}
+                                            <div className={`absolute bottom-0 right-0 size-3 rounded-full border-2 border-white ${getStatusDotColor(u.status)}`}></div>
+                                        </div>
+
+                                        {/* Name & Role */}
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-bold text-gray-800 text-sm leading-tight truncate" title={u.name}>
+                                                {u.name}
+                                            </h3>
+                                            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wide mt-0.5 truncate">
+                                                {u.roleDisplay}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <p className="text-sm text-gray-700 truncate flex items-center gap-2 font-bold mb-1">
-                                    <span className="material-symbols-outlined text-[16px] text-primary">call</span>
-                                    {u.phone || 'Sem contato'}
-                                </p>
-                                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide truncate">
-                                    {u.roleDisplay}
-                                </p>
+                                {/* Admin Toggle (Contextual) */}
+                                <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400">Acesso Admin</span>
+                                    <label className="relative inline-flex items-center cursor-pointer scale-75">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={u.isAdmin}
+                                            onChange={() => toggleAdmin(u.id, u.isAdmin)}
+                                            disabled={u.id === currentUser?.id}
+                                        />
+                                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+
+                                {/* Footer: Phone + Actions */}
+                                <div className="mt-auto pt-3 border-t border-gray-50 flex items-center gap-2">
+                                    {u.phone ? (
+                                        <a
+                                            href={`tel:${u.phone}`}
+                                            className="flex-1 flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-primary transition-colors bg-gray-50 px-2 py-1.5 rounded-lg truncate"
+                                            title={u.phone}
+                                        >
+                                            <span className={`material-symbols-outlined text-sm ${style.iconText}`}>call</span>
+                                            <span className="truncate">{u.phone}</span>
+                                        </a>
+                                    ) : (
+                                        <span className="flex-1 text-[10px] text-gray-400 italic px-2 py-1.5">Sem contato</span>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                            onClick={() => openEditModal(u)}
+                                            className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-primary/20"
+                                            title="Editar"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">edit</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteUser(u.id)}
+                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            title="Excluir"
+                                            disabled={u.id === currentUser?.id}
+                                        >
+                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        {/* Actions Footer */}
-                        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-                            <div className="flex items-center gap-1">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${u.roleType === 'doctor'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                    : 'bg-orange-50 text-orange-700 border-orange-100'
-                                    }`}>
-                                    {u.roleType === 'doctor' ? 'Médico' : 'Recepção'}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                {/* Edit Button */}
-                                <button
-                                    onClick={() => openEditModal(u)}
-                                    className="text-gray-400 hover:text-primary p-1.5 hover:bg-white rounded-lg transition-colors flex items-center gap-1 text-xs font-bold"
-                                    title="Editar Dados"
-                                >
-                                    <span className="material-symbols-outlined text-lg">edit</span>
-                                </button>
-
-                                {/* Delete Button */}
-                                <button
-                                    onClick={() => handleDeleteUser(u.id)}
-                                    className="text-gray-400 hover:text-red-500 p-1.5 hover:bg-white rounded-lg transition-colors flex items-center gap-1 text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed"
-                                    disabled={u.id === currentUser?.id}
-                                    title="Remover Usuário"
-                                >
-                                    <span className="material-symbols-outlined text-lg">delete</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {filteredUsers.length === 0 && (

@@ -374,7 +374,7 @@ const Messages: React.FC = () => {
                     </div>
                 )}
 
-                {user?.role === 'reception' && !isCompleted && !isResponded && (
+                {user?.role === 'reception' && !isResponded && (
                     <button
                         type="button"
                         onClick={(e) => handleDelete(note.id, e)}
@@ -556,12 +556,12 @@ const Messages: React.FC = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh]">
                         {/* Header */}
-                        <div className="px-8 py-5 border-b border-gray-100 bg-secondary text-white flex justify-between items-center">
+                        <div className="px-8 py-5 flex justify-between items-center shrink-0 bg-[#00665C] text-white">
                             <h3 className="font-bold text-xl flex items-center gap-2">
                                 <span className="material-symbols-outlined">edit_note</span>
                                 Novo Recado
                             </h3>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="hover:text-gray-300 transition-colors">
+                            <button onClick={() => setIsCreateModalOpen(false)} className="p-1 rounded-full hover:bg-white/20 transition-colors text-white">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
@@ -874,7 +874,7 @@ const Messages: React.FC = () => {
             {isResponseModalOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col">
-                        <div className={`px-6 py-5 border-b border-gray-100 flex justify-between items-center text-white ${interactionType === 'reply' ? 'bg-blue-600' : 'bg-orange-500'
+                        <div className={`px-8 py-5 flex justify-between items-center text-white shrink-0 ${interactionType === 'reply' ? 'bg-blue-600' : 'bg-orange-500'
                             }`}>
                             <h3 className="font-bold text-xl flex items-center gap-2">
                                 <span className="material-symbols-outlined text-2xl">
@@ -882,7 +882,7 @@ const Messages: React.FC = () => {
                                 </span>
                                 {interactionType === 'reply' ? 'Responder Recado' : 'Devolver ao Remetente'}
                             </h3>
-                            <button onClick={() => setIsResponseModalOpen(false)} className="hover:text-white/80 transition-colors">
+                            <button onClick={() => setIsResponseModalOpen(false)} className="p-1 rounded-full hover:bg-white/20 transition-colors text-white">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
@@ -922,66 +922,58 @@ const Messages: React.FC = () => {
                 </div>
             )}
 
-            {/* --- VIEW NOTE DETAILS MODAL (Widened) --- */}
+            {/* --- VIEW NOTE DETAILS MODAL --- */}
             {viewNote && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
-                        <div className="px-8 py-6 border-b border-gray-100 bg-gray-50 flex justify-between items-start">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                                    {viewNote.type === 'patient' ? 'Recado sobre Paciente' : 'Recado Geral'}
-                                </span>
-                                <h3 className="font-bold text-gray-800 text-2xl leading-tight">
-                                    {viewNote.title}
-                                </h3>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-sm text-gray-500">
-                                        Enviado em {new Date(viewNote.createdAt).toLocaleDateString()} às {new Date(viewNote.createdAt).toLocaleTimeString()}
-                                    </span>
-                                </div>
-                            </div>
-                            <button onClick={() => setViewNote(null)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-200 transition-colors">
-                                <span className="material-symbols-outlined text-2xl">close</span>
+                        <div className="px-8 py-5 flex justify-between items-center shrink-0 bg-[#00665C] text-white">
+                            <h3 className="font-bold text-xl text-white">
+                                Detalhes do Recado
+                            </h3>
+                            <button onClick={() => setViewNote(null)} className="p-1 rounded-full hover:bg-white/20 transition-colors text-white">
+                                <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                        <div className="p-8 overflow-y-auto no-scrollbar flex-1">
 
-                            {/* From/To Context */}
-                            <div className="flex items-center gap-6 text-base mb-8 bg-blue-50 p-6 rounded-xl border border-blue-100 text-blue-900">
-                                <div className="flex-1">
-                                    <span className="text-xs uppercase font-bold text-blue-400 block mb-1">De</span>
-                                    <span className="font-bold text-lg">{viewNote.from}</span>
-                                </div>
-                                <span className="material-symbols-outlined opacity-30 text-3xl">arrow_forward</span>
-                                <div className="flex-1 text-right">
-                                    <span className="text-xs uppercase font-bold text-blue-400 block mb-1">Para</span>
-                                    <span className="font-bold text-lg">{getRecipientName(viewNote.to)}</span>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                                 {/* Left Column: Content */}
-                                <div className={viewNote.type === 'patient' ? "lg:col-span-2" : "lg:col-span-3"}>
-                                    {/* Message Content */}
-                                    <div className="mb-8">
-                                        <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-sm">chat</span>
-                                            Mensagem
-                                        </h4>
-                                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 text-gray-800 leading-relaxed font-medium text-lg shadow-sm whitespace-pre-wrap">
-                                            "{viewNote.content}"
+                                <div className={`${viewNote.type === 'patient' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-6`}>
+                                    <div>
+                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Título do Recado</label>
+                                                <h2 className="text-gray-900 font-bold text-3xl leading-tight mt-1">{viewNote.title}</h2>
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    Enviado em {new Date(viewNote.createdAt).toLocaleDateString()} às {new Date(viewNote.createdAt).toLocaleTimeString()}
+                                                </p>
+                                            </div>
+
+                                            <span className={`px-4 py-2 rounded-xl text-sm font-bold border shadow-sm shrink-0 ${viewNote.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-orange-100 text-orange-700 border-orange-200'}`}>
+                                                {viewNote.status === 'pending' ? 'Pendente' : viewNote.status === 'responded' ? 'Respondido' : 'Concluído'}
+                                            </span>
                                         </div>
 
-                                        {/* Attachment Display in View Mode */}
+                                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-8">
+                                            <label className="text-xs font-bold text-gray-400 uppercase mb-3 block flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-sm">chat</span>
+                                                Mensagem
+                                            </label>
+                                            <p className="text-gray-800 leading-relaxed font-medium text-lg whitespace-pre-wrap">
+                                                {viewNote.content}
+                                            </p>
+                                        </div>
+
+                                        {/* Attachment Display */}
                                         {viewNote.attachment && (
-                                            <div className="mt-4">
-                                                <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                                            <div className="mt-4 pb-8">
+                                                <label className="text-xs font-bold text-gray-400 uppercase mb-2 block flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-sm">attach_file</span>
                                                     Anexo
-                                                </h4>
+                                                </label>
                                                 <div className="inline-flex flex-col border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white hover:shadow-md transition-shadow">
                                                     {viewNote.attachment.type === 'image' ? (
                                                         <div className="relative group cursor-pointer">
@@ -1016,11 +1008,6 @@ const Messages: React.FC = () => {
                                                             >
                                                                 <span className="material-symbols-outlined">download</span>
                                                             </a>
-                                                        </div>
-                                                    )}
-                                                    {viewNote.attachment.type === 'image' && (
-                                                        <div className="p-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-                                                            <span className="text-xs font-bold text-gray-600 truncate max-w-[200px]">{viewNote.attachment.name}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1065,37 +1052,53 @@ const Messages: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* Right Column: Patient Data - Only render if patient type */}
+                                {/* Right Column: Patient Data */}
                                 {viewNote.type === 'patient' && (
-                                    <div className="lg:col-span-1">
-                                        <div className="p-6 border border-gray-200 rounded-2xl bg-gray-50/50 sticky top-0">
-                                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-sm">person</span>
-                                                Dados do Paciente
-                                            </h4>
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <span className="block text-xs text-gray-500 mb-0.5">Nome</span>
-                                                    <span className="font-bold text-gray-900 text-lg leading-tight block">{viewNote.patientName}</span>
+                                    <div className="lg:col-span-4 flex flex-col h-full">
+                                        <div className="bg-primary-light/50 rounded-2xl border border-primary/20 p-6 h-full flex flex-col shadow-sm">
+                                            <div className="flex items-center gap-3 text-primary-dark border-b border-primary/10 pb-4 mb-4">
+                                                <div className="p-2 bg-white rounded-lg shadow-sm text-primary">
+                                                    <span className="material-symbols-outlined text-xl">personal_injury</span>
                                                 </div>
                                                 <div>
-                                                    <span className="block text-xs text-gray-500 mb-0.5">Telefone</span>
-                                                    <span className="font-bold text-gray-800 flex items-center gap-2">
-                                                        <span className="material-symbols-outlined text-sm text-primary">call</span>
+                                                    <h4 className="font-bold text-lg leading-none text-primary-dark">Paciente</h4>
+                                                    <span className="text-xs text-primary/70 font-medium">Dados vinculados</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-5 flex-1">
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-primary/60 uppercase tracking-wider">Nome Completo</label>
+                                                    <p className="text-gray-900 font-bold text-xl mt-1 leading-tight">{viewNote.patientName || '-'}</p>
+                                                </div>
+
+                                                <div className="flex flex-col gap-4">
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-primary/60 uppercase tracking-wider flex items-center gap-1">
+                                                            Carteirinha
+                                                            <span className="material-symbols-outlined text-[10px] text-primary/40">badge</span>
+                                                        </label>
+                                                        <p className="font-mono text-base font-medium bg-white px-3 py-2 rounded-lg border border-primary/20 text-gray-800 w-full shadow-sm tracking-wide mt-1">
+                                                            {viewNote.patientCard || '-'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] font-bold text-primary/60 uppercase tracking-wider flex items-center gap-1">
+                                                            Última Consulta
+                                                            <span className="material-symbols-outlined text-[10px] text-primary/40">calendar_month</span>
+                                                        </label>
+                                                        <p className="text-gray-900 font-bold text-sm mt-1 ml-1">
+                                                            {viewNote.appointmentDate ? new Date(viewNote.appointmentDate).toLocaleDateString('pt-BR') : '-'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-2 border-t border-primary/10 mt-2">
+                                                    <label className="text-[10px] font-bold text-primary/60 uppercase tracking-wider">Contato</label>
+                                                    <a href={`tel:${viewNote.patientPhone}`} className="flex items-center gap-2 text-gray-800 font-bold mt-2 hover:text-primary transition-colors bg-white/60 p-2 rounded-lg">
+                                                        <span className="material-symbols-outlined text-lg text-primary">call</span>
                                                         {viewNote.patientPhone || '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="pt-3 border-t border-gray-200">
-                                                    <span className="block text-xs text-gray-500 mb-0.5">Data da Última Consulta</span>
-                                                    <span className="font-bold text-gray-800">
-                                                        {viewNote.appointmentDate ? new Date(viewNote.appointmentDate).toLocaleDateString('pt-BR') : '-'}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-xs text-gray-500 mb-0.5">Carteirinha</span>
-                                                    <span className="font-mono text-gray-800 bg-white px-2 py-1 rounded border border-gray-200 inline-block">
-                                                        {viewNote.patientCard || '-'}
-                                                    </span>
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -1104,22 +1107,33 @@ const Messages: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Modal Footer Actions - Now always visible to show 'Fechar' */}
-                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-4 justify-between items-center">
-                            <button
-                                onClick={() => setViewNote(null)}
-                                className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors"
-                            >
-                                Fechar
-                            </button>
+                        {/* Modal Footer */}
+                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-4 justify-between items-center shrink-0">
+                            <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">De</span>
+                                    <span className="text-sm font-bold text-gray-700 whitespace-nowrap">{viewNote.from}</span>
+                                </div>
+                                <span className="material-symbols-outlined text-gray-300 text-lg">arrow_forward</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Para</span>
+                                    <span className="text-sm font-bold text-gray-700 whitespace-nowrap">{getRecipientName(viewNote.to)}</span>
+                                </div>
+                            </div>
+
                             <div className="flex gap-2">
-                                {viewNote.status !== 'completed' && renderActionButtons(viewNote, true)}
+                                <button
+                                    onClick={() => setViewNote(null)}
+                                    className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors border border-gray-200 bg-white"
+                                >
+                                    Fechar
+                                </button>
+                                {renderActionButtons(viewNote, true)}
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };

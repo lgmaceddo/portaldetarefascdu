@@ -15,29 +15,30 @@ export interface Task {
   id: string;
   title: string;
   description?: string; // New: Detailed description
-  
+
   // Patient Context
   isPatientRelated?: boolean; // New: Toggle
   patient?: string;
   patientCard?: string; // New: Carteirinha
   patientGuide?: string; // New: Guia
   patientPhone?: string; // New: Telefone
-  
+
   status: TaskStatus;
   priority: Priority;
   date: string;
-  assignedTo: string;
+  assignedTo?: string;
 }
 
 export interface Doctor {
   id: string;
   name: string;
   specialty: string;
-  phone: string; 
+  phone: string;
   avatar: string;
   color: string;
   status: 'active' | 'inactive' | 'vacation'; // New field
   isAdmin?: boolean; // New: Admin capability
+  gender?: 'male' | 'female'; // New: Gender field
 }
 
 export interface Receptionist {
@@ -81,7 +82,7 @@ export interface NoteHistory {
   id: string;
   actor: 'doctor' | 'reception';
   actorName: string;
-  action: 'create' | 'reply' | 'return' | 'complete';
+  action: 'create' | 'reply' | 'return' | 'complete' | 'read';
   content?: string; // The message/justification
   timestamp: string;
 }
@@ -92,7 +93,7 @@ export interface Note {
   type: 'general' | 'patient';
   from: string; // Usually "Recepção"
   to: string; // Doctor ID or User ID
-  
+
   // Patient Data (Optional)
   patientName?: string;
   patientCard?: string;
@@ -100,7 +101,7 @@ export interface Note {
   appointmentDate?: string;
 
   content: string; // Original Message
-  
+
   // Attachment (New)
   attachment?: {
     name: string;
@@ -108,10 +109,14 @@ export interface Note {
     url: string; // Base64 data URI
   };
 
-  createdAt: string; 
+  createdAt: string;
   status: NoteStatus;
-  
+
   history: NoteHistory[]; // Audit trail / Conversation
+  category?: 'urgent' | 'process' | 'system' | 'training' | 'general';
+  isRead?: boolean;
+  authorName?: string;
+  audience?: 'all' | 'reception' | 'doctor';
 }
 
 export interface ExtractedData {

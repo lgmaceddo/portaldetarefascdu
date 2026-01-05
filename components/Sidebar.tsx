@@ -12,13 +12,13 @@ interface NavItem {
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
-  
+
   // Define menu structure with requested order
   const allNavItems: NavItem[] = [
     { name: 'Dashboard', icon: 'dashboard', path: '/' },
-    { 
-      name: 'Agenda', 
-      icon: 'calendar_month', 
+    {
+      name: 'Agenda',
+      icon: 'calendar_month',
       subItems: [
         { name: 'Confirmar Consulta', icon: 'event_available', path: '/agenda/confirmacao' },
         { name: 'Confirmar Procedimento', icon: 'fact_check', path: '/agenda/confirmar-procedimento' },
@@ -38,17 +38,17 @@ const Sidebar: React.FC = () => {
 
   // Filter items based on user role
   const navItems = allNavItems.filter(item => {
-      // Doctor View: Restricted to Dashboard, Tarefas, Recados
-      if (user?.role === 'doctor') {
-          return ['Dashboard', 'Tarefas', 'Recados'].includes(item.name);
-      }
-      
-      // Reception View: Hide Dashboard, show everything else
-      if (user?.role === 'reception') {
-          return item.name !== 'Dashboard';
-      }
+    // Doctor View: Restricted to Dashboard, Tarefas, Recados
+    if (user?.role === 'doctor') {
+      return ['Dashboard', 'Tarefas', 'Recados'].includes(item.name);
+    }
 
-      return true;
+    // Reception View: Hide Dashboard, show everything else
+    if (user?.role === 'reception') {
+      return item.name !== 'Dashboard';
+    }
+
+    return true;
   });
 
   const [expandedMenus, setExpandedMenus] = useState<string[]>(
@@ -57,8 +57,8 @@ const Sidebar: React.FC = () => {
 
   const toggleMenu = (name: string) => {
     // Accordion behavior: Only allow one open at a time
-    setExpandedMenus(prev => 
-      prev.includes(name) 
+    setExpandedMenus(prev =>
+      prev.includes(name)
         ? [] // If clicking the currently open one, close it
         : [name] // If clicking a new one, open it (this automatically closes others by replacing the array)
     );
@@ -74,42 +74,38 @@ const Sidebar: React.FC = () => {
               <>
                 <button
                   onClick={() => toggleMenu(item.name)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group text-sm font-medium ${
-                    location.pathname.includes(item.name.toLowerCase()) || expandedMenus.includes(item.name)
-                      ? 'text-primary-dark bg-primary-light' 
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group text-base font-bold ${location.pathname.includes(item.name.toLowerCase()) || expandedMenus.includes(item.name)
+                    ? 'text-primary-dark bg-primary-light'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
                 >
                   <div className="flex items-center">
                     <span className="material-symbols-outlined text-xl">{item.icon}</span>
                     <span className="ml-3 hidden lg:block">{item.name}</span>
                   </div>
-                  <span className={`material-symbols-outlined text-sm hidden lg:block transition-transform duration-200 ${
-                    expandedMenus.includes(item.name) ? 'rotate-180' : ''
-                  }`}>
+                  <span className={`material-symbols-outlined text-sm hidden lg:block transition-transform duration-200 ${expandedMenus.includes(item.name) ? 'rotate-180' : ''
+                    }`}>
                     expand_more
                   </span>
                 </button>
-                
+
                 {/* Sub-items Container */}
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    expandedMenus.includes(item.name) ? 'max-h-52 opacity-100 mt-1' : 'max-h-0 opacity-0'
-                }`}>
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedMenus.includes(item.name) ? 'max-h-52 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                  }`}>
                   <div className="flex flex-col gap-1 pl-0 lg:pl-3 relative ml-2 border-l-2 border-gray-100">
                     {item.subItems.map((sub) => (
                       <NavLink
                         key={sub.path}
                         to={sub.path}
                         className={({ isActive }) =>
-                          `flex items-center px-3 py-2 rounded-r-lg transition-colors text-xs font-medium ${
-                            isActive
-                              ? 'bg-primary text-white shadow-sm'
-                              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                          `flex items-center px-3 py-2 rounded-r-lg transition-colors text-sm font-bold ${isActive
+                            ? 'bg-primary text-white shadow-sm'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                           }`
                         }
                       >
                         <span className="material-symbols-outlined text-base mr-2">
-                            {sub.icon}
+                          {sub.icon}
                         </span>
                         <span className="hidden lg:block">{sub.name}</span>
                       </NavLink>
@@ -123,10 +119,9 @@ const Sidebar: React.FC = () => {
                 to={item.path!}
                 onClick={() => setExpandedMenus([])} // Close any open accordion when navigating to a root item
                 className={({ isActive }) =>
-                  `flex items-center px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                    isActive
-                      ? 'bg-primary-light text-primary-dark shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  `flex items-center px-3 py-2.5 rounded-lg transition-colors text-base font-bold ${isActive
+                    ? 'bg-primary-light text-primary-dark shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`
                 }
               >
@@ -137,6 +132,19 @@ const Sidebar: React.FC = () => {
           </div>
         ))}
       </nav>
+
+      {/* --- Sidebar Bottom Logo (Fixed outside scroll area) --- */}
+      <div className="pt-4 pb-2 px-2 flex flex-col items-center gap-4 shrink-0">
+        <div className="w-full h-px bg-gray-100"></div>
+        <img
+          src="/unimed-bauru-logo.png"
+          alt="Unimed Bauru"
+          className="w-auto h-8 lg:h-12 object-contain opacity-80 hover:opacity-100 transition-opacity duration-300"
+        />
+        <div className="hidden lg:block text-center mt-[-10px]">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] leading-tight">Centro de Diagnóstico</p>
+        </div>
+      </div>
     </aside>
   );
 };

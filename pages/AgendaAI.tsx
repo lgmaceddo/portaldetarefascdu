@@ -429,7 +429,7 @@ ${signature}`;
     };
 
     return (
-        <div className="flex flex-col h-full max-w-7xl mx-auto relative">
+        <div className="flex flex-col h-full relative">
             <div className="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900 leading-tight">{title}</h2>

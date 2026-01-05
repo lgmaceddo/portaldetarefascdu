@@ -540,41 +540,42 @@ const Scripts: React.FC = () => {
 
             {/* --- MODAL: VIEW / COPY SCRIPT --- */}
             {viewScript && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col">
-                        <div className="px-6 py-4 bg-primary-dark text-white border-b border-white/10 flex justify-between items-start">
-                            <h3 className="font-bold text-xl uppercase leading-tight pr-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className="bg-[#f8fafb] rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col border border-white">
+                        {/* Header */}
+                        <div className="px-8 pt-8 pb-4 flex justify-between items-center">
+                            <h3 className="font-extrabold text-xl text-gray-800 uppercase tracking-tight">
                                 {viewScript.title}
                             </h3>
-                            <button onClick={() => setViewScript(null)} className="text-white hover:text-gray-300">
-                                <span className="material-symbols-outlined">close</span>
+                            <button
+                                onClick={() => setViewScript(null)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-2xl">close</span>
                             </button>
                         </div>
 
-                        <div className="p-6 bg-gray-50 flex-1">
-                            <div className="mb-4">
-                                <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded uppercase">
-                                    Categoria: {categories.find(c => c.id === viewScript.categoryId)?.name}
-                                </span>
-                            </div>
-                            <div className="bg-white border border-gray-200 rounded-lg p-6 text-gray-800 text-lg leading-relaxed whitespace-pre-wrap shadow-sm">
+                        {/* Content */}
+                        <div className="px-8 pb-8">
+                            <div className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap font-medium">
                                 {viewScript.content.replace(/\[MEU_NOME\]/g, getUserShortName() || '[Seu Nome]')}
                             </div>
                         </div>
 
-                        <div className="p-6 border-t border-gray-100 flex gap-3">
+                        {/* Footer */}
+                        <div className="px-8 py-6 bg-transparent flex justify-end gap-3">
                             <button
                                 onClick={() => setViewScript(null)}
-                                className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-lg transition-colors"
+                                className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition-all border border-gray-200/50"
                             >
                                 Fechar
                             </button>
                             <button
                                 onClick={() => { handleCopy(viewScript.content); setViewScript(null); }}
-                                className="flex-1 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-lg transition-colors shadow-lg shadow-green-200 flex items-center justify-center gap-2"
+                                className="px-6 py-2.5 bg-[#00665C] hover:bg-[#004D46] text-white font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
                             >
-                                <span className="material-symbols-outlined">content_copy</span>
-                                Copiar Texto
+                                <span className="material-symbols-outlined text-xl">content_copy</span>
+                                Copiar
                             </button>
                         </div>
                     </div>

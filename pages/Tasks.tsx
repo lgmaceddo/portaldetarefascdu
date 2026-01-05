@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Task, TaskStatus, Priority } from '../types';
 
 const mockTasks: Task[] = [
@@ -12,8 +12,7 @@ const mockTasks: Task[] = [
         patientPhone: '(14) 99887-7766',
         status: TaskStatus.PENDING,
         priority: Priority.HIGH,
-        date: '2023-10-27',
-        assignedTo: 'Dr. Ricardo'
+        date: '2023-10-27'
     },
     {
         id: '2',
@@ -22,15 +21,22 @@ const mockTasks: Task[] = [
         isPatientRelated: false,
         status: TaskStatus.IN_PROGRESS,
         priority: Priority.MEDIUM,
-        date: '2023-10-28',
-        assignedTo: 'Enf. Carla'
+        date: '2023-10-28'
     },
-    { id: '3', title: 'Solicitar insumos', status: TaskStatus.DONE, priority: Priority.LOW, date: '2023-10-26', assignedTo: 'Recepção' },
-    { id: '4', title: 'Confirmar cirurgias da semana', status: TaskStatus.PENDING, priority: Priority.HIGH, date: '2023-10-29', assignedTo: 'Secretaria' },
+    { id: '3', title: 'Solicitar insumos', status: TaskStatus.DONE, priority: Priority.LOW, date: '2023-10-26' },
+    { id: '4', title: 'Confirmar cirurgias da semana', status: TaskStatus.PENDING, priority: Priority.HIGH, date: '2023-10-29' },
 ];
 
 const Tasks: React.FC = () => {
-    const [tasks, setTasks] = useState<Task[]>(mockTasks);
+    const [tasks, setTasks] = useState<Task[]>(() => {
+        const saved = localStorage.getItem('mediportal_tasks');
+        return saved ? JSON.parse(saved) : mockTasks;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('mediportal_tasks', JSON.stringify(tasks));
+    }, [tasks]);
+
     const [filter, setFilter] = useState<TaskStatus | 'Active'>('Active');
 
     // Modal State
@@ -49,8 +55,7 @@ const Tasks: React.FC = () => {
         patientPhone: '',
         status: TaskStatus.PENDING,
         priority: Priority.MEDIUM,
-        date: new Date().toISOString().split('T')[0],
-        assignedTo: ''
+        date: new Date().toISOString().split('T')[0]
     });
 
     // Filter Logic
@@ -88,8 +93,7 @@ const Tasks: React.FC = () => {
                 patientPhone: '',
                 status: TaskStatus.PENDING,
                 priority: Priority.MEDIUM,
-                date: new Date().toISOString().split('T')[0],
-                assignedTo: ''
+                date: new Date().toISOString().split('T')[0]
             });
         }
         setIsModalOpen(true);
@@ -124,8 +128,8 @@ const Tasks: React.FC = () => {
     };
 
     const handleSave = () => {
-        if (!formData.title || !formData.assignedTo) {
-            alert("Por favor, preencha o título e o responsável.");
+        if (!formData.title) {
+            alert("Por favor, preencha o título da tarefa.");
             return;
         }
 
@@ -149,8 +153,7 @@ const Tasks: React.FC = () => {
                 patientPhone: cleanData.patientPhone,
                 status: cleanData.status as TaskStatus,
                 priority: cleanData.priority as Priority,
-                date: cleanData.date || new Date().toISOString().split('T')[0],
-                assignedTo: cleanData.assignedTo || ''
+                date: cleanData.date || new Date().toISOString().split('T')[0]
             };
             setTasks(prev => [newTask, ...prev]);
         } else if (modalMode === 'edit' && currentTask) {
@@ -257,7 +260,6 @@ const Tasks: React.FC = () => {
                                             <span className="material-symbols-outlined text-sm">person</span>{task.patient}
                                         </span>
                                     )}
-                                    <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md"><span className="material-symbols-outlined text-sm">badge</span>{task.assignedTo}</span>
                                 </div>
                             </div>
                         </div>
@@ -308,14 +310,13 @@ const Tasks: React.FC = () => {
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 transition-all">
 
                         {/* Header */}
-                        <div className={`px-8 py-5 flex justify-between items-center shrink-0 ${modalMode === 'view' ? 'bg-gray-100' : 'bg-primary text-white'
-                            }`}>
-                            <h3 className={`font-bold text-xl ${modalMode === 'view' ? 'text-gray-800' : 'text-white'}`}>
+                        <div className="px-8 py-5 flex justify-between items-center shrink-0 bg-[#00665C] text-white">
+                            <h3 className="font-bold text-xl text-white">
                                 {modalMode === 'create' && 'Nova Tarefa'}
                                 {modalMode === 'edit' && 'Editar Tarefa'}
                                 {modalMode === 'view' && 'Detalhes da Tarefa'}
                             </h3>
-                            <button onClick={closeModal} className={`p-1 rounded-full hover:bg-white/20 transition-colors ${modalMode === 'view' ? 'text-gray-500' : 'text-white'}`}>
+                            <button onClick={closeModal} className="p-1 rounded-full hover:bg-white/20 transition-colors text-white">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
@@ -325,17 +326,23 @@ const Tasks: React.FC = () => {
                             {/* VIEW MODE */}
                             {modalMode === 'view' ? (
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                    {/* Left Column: Main Task Info (8 cols) */}
-                                    <div className="lg:col-span-8 space-y-6">
+                                    {/* Left Column: Main Task Info - Spans 12 if no patient, 8 if patient */}
+                                    <div className={`${formData.isPatientRelated ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-6`}>
                                         <div className="flex flex-col gap-2">
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Título</label>
                                                     <h2 className="text-gray-900 font-bold text-3xl leading-tight mt-1">{formData.title}</h2>
                                                 </div>
-                                                <span className={`px-4 py-1.5 rounded-full text-sm font-bold border shrink-0 ${getPriorityColor(formData.priority as Priority)}`}>
-                                                    {formData.priority}
-                                                </span>
+                                                <div className="flex gap-2 shrink-0">
+                                                    <div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold border ${getStatusStyles(formData.status as TaskStatus)}`}>
+                                                        <span className="material-symbols-outlined text-lg">{getStatusIcon(formData.status as TaskStatus)}</span>
+                                                        {formData.status}
+                                                    </div>
+                                                    <span className={`px-4 py-1.5 rounded-full text-sm font-bold border shrink-0 ${getPriorityColor(formData.priority as Priority)}`}>
+                                                        {formData.priority}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -350,33 +357,13 @@ const Tasks: React.FC = () => {
                                         </div>
 
                                         <div className="flex gap-8 border-t border-gray-100 pt-6">
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-400 uppercase">Responsável</label>
-                                                <div className="flex items-center gap-3 mt-2">
-                                                    <div className="size-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold">
-                                                        {formData.assignedTo?.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-gray-900">{formData.assignedTo}</p>
-                                                        <p className="text-xs text-gray-500">Colaborador</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="h-auto w-px bg-gray-200"></div>
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-400 uppercase">Status Atual</label>
-                                                <div className={`mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg font-bold ${getStatusStyles(formData.status as TaskStatus)}`}>
-                                                    <span className="material-symbols-outlined text-xl">{getStatusIcon(formData.status as TaskStatus)}</span>
-                                                    {formData.status}
-                                                </div>
-                                            </div>
+                                            {/* Status and Responsável removed from here, Status moved to header */}
                                         </div>
                                     </div>
 
-                                    {/* Right Column: Context/Patient (4 cols) */}
-                                    <div className="lg:col-span-4 flex flex-col h-full">
-                                        {formData.isPatientRelated ? (
-                                            // CHANGED: From Blue to Primary Green Theme
+                                    {/* Right Column: Context/Patient (4 cols) - Only shown if patient related */}
+                                    {formData.isPatientRelated && (
+                                        <div className="lg:col-span-4 flex flex-col h-full">
                                             <div className="bg-primary-light/50 rounded-2xl border border-primary/20 p-6 h-full flex flex-col shadow-sm">
                                                 <div className="flex items-center gap-3 text-primary-dark border-b border-primary/10 pb-4 mb-4">
                                                     <div className="p-2 bg-white rounded-lg shadow-sm text-primary">
@@ -394,7 +381,6 @@ const Tasks: React.FC = () => {
                                                         <p className="text-gray-900 font-bold text-xl mt-1 leading-tight">{formData.patient || '-'}</p>
                                                     </div>
 
-                                                    {/* CHANGED: Vertical stack instead of Grid to prevent overlap/truncation */}
                                                     <div className="flex flex-col gap-4">
                                                         <div>
                                                             <label className="text-[10px] font-bold text-primary/60 uppercase tracking-wider flex items-center gap-1">
@@ -425,14 +411,8 @@ const Tasks: React.FC = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <div className="h-full border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-300 p-8 text-center bg-gray-50/50">
-                                                <span className="material-symbols-outlined text-5xl mb-3">work_outline</span>
-                                                <h4 className="font-bold text-gray-400">Tarefa Interna</h4>
-                                                <p className="text-sm">Esta tarefa não está vinculada a um paciente específico.</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 /* EDIT / CREATE MODE - Full Horizontal Form */
@@ -452,17 +432,7 @@ const Tasks: React.FC = () => {
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Responsável *</label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.assignedTo}
-                                                    onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
-                                                    className="w-full p-3 border border-gray-300 rounded-xl focus:border-primary outline-none text-sm bg-gray-50"
-                                                    placeholder="Nome ou Setor"
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="col-span-2 grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Prioridade</label>
                                                     <select

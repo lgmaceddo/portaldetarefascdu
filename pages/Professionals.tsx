@@ -37,7 +37,8 @@ const Professionals: React.FC = () => {
                     phone: p.phone || '', // Need to ensure phone exists in Schema? I might need to add it or use raw_meta
                     avatar: p.avatar || '',
                     status: (p.status as any) || 'active',
-                    color: ''
+                    color: '',
+                    gender: p.gender
                 }));
                 setProfessionals(mappedDoctors);
             }
@@ -77,16 +78,16 @@ const Professionals: React.FC = () => {
     // --- Helpers for Design Logic ---
 
     const getInitials = (name: string) => {
-        // Remove titles like Dr, Dra, Dr., Dra. to get real initials
-        const cleanName = name.replace(/^(dr|dra|dr\.|dra\.)\s+/i, '').trim();
+        // Remove titles like Dr, Dra, Dr., Dra., DRº, DRª to get real initials
+        const cleanName = name.replace(/^(dr|dra|dr\.|dra\.|drº|drª)\s+/i, '').trim();
         const parts = cleanName.split(' ');
 
         if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
 
-    const getStyleByName = (name: string) => {
-        const isFemale = name.toLowerCase().startsWith('dra');
+    const getStyleByName = (name: string, gender?: string) => {
+        const isFemale = gender === 'female' || name.toLowerCase().includes('dra');
 
         if (isFemale) {
             return {
@@ -142,7 +143,7 @@ const Professionals: React.FC = () => {
             {/* Grid Layout: Up to 6 cards per line on 2xl screens */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 pb-6">
                 {filtered.map(professional => {
-                    const style = getStyleByName(professional.name);
+                    const style = getStyleByName(professional.name, professional.gender);
 
                     return (
                         <div

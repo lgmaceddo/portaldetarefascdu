@@ -58,9 +58,13 @@ const INITIAL_UNITS: Record<string, UnitData> = {
     }
 };
 
+import NotificationDrawer from './NotificationDrawer';
+
 const Layout: React.FC = () => {
     const { isAuthenticated, logout } = useAuth();
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // --- Unit Info State ---
     const [unitsData, setUnitsData] = useState<Record<string, UnitData>>(() => {
@@ -141,15 +145,17 @@ const Layout: React.FC = () => {
                 isDarkMode={isDarkMode}
                 toggleDarkMode={toggleDarkMode}
                 onLogoutClick={handleLogoutClick}
+                onToggleNotifications={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                unreadCount={unreadCount}
             />
 
             {/* --- MIDDLE BODY (Sidebar + Content) --- */}
             <div className="flex-1 flex overflow-hidden relative">
                 <Sidebar />
 
-                <main className="flex-1 overflow-y-auto p-4 lg:p-6 relative flex flex-col min-w-0">
+                <main className="flex-1 overflow-y-auto p-2 lg:p-3 relative flex flex-col min-w-0">
                     {/* Main Content Area Wrapper */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 flex flex-col p-6 animate-in fade-in duration-300 transition-colors duration-200">
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 flex flex-col p-4 animate-in fade-in duration-300 transition-colors duration-200">
                         <Outlet />
                     </div>
                 </main>
@@ -160,7 +166,12 @@ const Layout: React.FC = () => {
                 &copy; 2026 Unimed Bauru. Todos os direitos reservados.
             </footer>
 
-            {/* --- MODALS --- */}
+            {/* --- MODALS & DRAWERS --- */}
+            <NotificationDrawer
+                isOpen={isNotificationsOpen}
+                onClose={() => setIsNotificationsOpen(false)}
+                onNotesUpdate={(count) => setUnreadCount(count)}
+            />
             {showLogoutConfirm && (
                 <LogoutModal
                     onConfirm={confirmLogout}

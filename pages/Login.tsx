@@ -25,6 +25,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [specialty, setSpecialty] = useState('');
   const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
 
   const [loading, setLoading] = useState(false);
 
@@ -108,15 +109,19 @@ const Login: React.FC = () => {
         const userAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${role === 'doctor' ? '00965e' : 'ef4444'}&color=fff`;
 
         // 1. Sign Up with Supabase Auth (Trigger handles profile creation)
+        const cleanName = name.replace(/^(dr|dra|dr\.|dra\.|drº|drª)\s+/i, '').trim();
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              name: name,
+              name: role === 'doctor'
+                ? (gender === 'male' ? `DRº ${cleanName}` : `DRª ${cleanName}`)
+                : name,
               role: role,
               avatar: userAvatar,
               specialty: role === 'doctor' ? specialty.trim() : null,
+              gender: gender,
             }
           }
         });
@@ -220,6 +225,36 @@ const Login: React.FC = () => {
 
             <div className="space-y-4">
               {isRegistering && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wide">
+                    Sexo:
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      onClick={() => setGender('male')}
+                      className={`cursor-pointer border-2 rounded-xl p-3 flex items-center justify-center gap-2 transition-all ${gender === 'male'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-gray-100 text-gray-400 hover:border-gray-200 bg-gray-50'
+                        }`}
+                    >
+                      <span className="material-symbols-outlined text-xl">male</span>
+                      <span className="text-sm font-bold">Masculino</span>
+                    </div>
+                    <div
+                      onClick={() => setGender('female')}
+                      className={`cursor-pointer border-2 rounded-xl p-3 flex items-center justify-center gap-2 transition-all ${gender === 'female'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-gray-100 text-gray-400 hover:border-gray-200 bg-gray-50'
+                        }`}
+                    >
+                      <span className="material-symbols-outlined text-xl">female</span>
+                      <span className="text-sm font-bold">Feminino</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isRegistering && (
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Nome Completo</label>
                   <div className="relative">
@@ -230,7 +265,7 @@ const Login: React.FC = () => {
                       value={name}
                       onChange={handleNameChange}
                       className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium text-gray-700"
-                      placeholder="Digite seu nome..."
+                      placeholder={role === 'doctor' ? "Sem o prefixo Dr/Dra..." : "Digite seu nome..."}
                     />
                   </div>
                 </div>

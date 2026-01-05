@@ -15,6 +15,7 @@ interface UnifiedUser {
     status: string;
     isAdmin: boolean;
     email?: string; // Added email
+    gender?: string;
     originalData: any;
 }
 
@@ -60,6 +61,7 @@ const Users: React.FC = () => {
                     status: p.status || 'offline',
                     isAdmin: !!p.is_admin,
                     email: p.email,
+                    gender: p.gender,
                     originalData: p
                 }));
                 setUsers(mappedUsers);
@@ -181,14 +183,14 @@ const Users: React.FC = () => {
 
     // --- Helpers ---
     const getInitials = (name: string) => {
-        const cleanName = name.replace(/^(dr|dra|dr\.|dra\.)\s+/i, '').trim();
+        const cleanName = name.replace(/^(dr|dra|dr\.|dra\.|drº|drª)\s+/i, '').trim();
         const parts = cleanName.split(' ');
 
         if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
 
-    const getStyleByRole = (role: 'doctor' | 'reception', name: string) => {
+    const getStyleByRole = (role: 'doctor' | 'reception', name: string, gender?: string) => {
         // Reception always Orange
         if (role === 'reception') {
             return {
@@ -200,7 +202,7 @@ const Users: React.FC = () => {
         }
 
         // Doctors: Purple for Dra., Green (Primary) for Dr.
-        const isFemale = name.toLowerCase().startsWith('dra');
+        const isFemale = gender === 'female' || name.toLowerCase().includes('dra');
         if (isFemale) {
             return {
                 bg: 'bg-purple-50',
@@ -305,7 +307,7 @@ const Users: React.FC = () => {
             {/* Users List - Standardized Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 pb-10">
                 {filteredUsers.map(u => {
-                    const style = getStyleByRole(u.roleType, u.name);
+                    const style = getStyleByRole(u.roleType, u.name, u.gender);
 
                     return (
                         <div

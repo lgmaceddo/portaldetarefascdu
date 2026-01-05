@@ -23,6 +23,8 @@ interface NavbarProps {
     isDarkMode: boolean;
     toggleDarkMode: () => void;
     onLogoutClick: () => void;
+    onToggleNotifications: () => void;
+    unreadCount: number;
 }
 
 const Navbar: React.FC<NavbarProps> = ({
@@ -30,7 +32,9 @@ const Navbar: React.FC<NavbarProps> = ({
     onEditUnitClick,
     isDarkMode,
     toggleDarkMode,
-    onLogoutClick
+    onLogoutClick,
+    onToggleNotifications,
+    unreadCount
 }) => {
     const { user } = useAuth();
     const [time, setTime] = useState(new Date());
@@ -58,22 +62,21 @@ const Navbar: React.FC<NavbarProps> = ({
         <>
             {/* --- HEADER PART 1: Brand & Identity (Dark Green) --- */}
             <header className="bg-primary-dark h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-md">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center bg-[#10605B] p-1 rounded-lg overflow-hidden shadow-inner">
-                        <img
-                            src="/unimed-logo-final.png"
-                            alt="Unimed Bauru"
-                            className="h-14 w-auto object-contain hover:scale-110 transition-transform duration-300"
-                        />
-                    </div>
-                    <div className="hidden md:block w-px h-10 bg-white/20"></div>
-                    <div>
-                        <h1 className="text-white font-bold text-lg leading-none uppercase tracking-wide">PORTAL DE TAREFAS CDU</h1>
-                        <p className="text-[#75CEBF] font-bold text-sm uppercase tracking-wide hidden sm:block -mt-1 drop-shadow-sm">9º ANDAR - OFTALMOLOGIA</p>
-                    </div>
+                <div className="flex flex-col -gap-1">
+                    <h1 className="text-white font-bold text-lg leading-none uppercase tracking-wide">FLUXO DE TRABALHO CDU</h1>
+                    <p className="text-[#75CEBF] font-bold text-[11px] uppercase tracking-wider hidden sm:block drop-shadow-sm opacity-90 leading-tight">9º ANDAR - OFTALMOLOGIA</p>
                 </div>
-                <div className="text-white/90 font-script text-xl hidden lg:block tracking-wide">
-                    Juntos pelo melhor atendimento!
+
+                {/* Clock in Header */}
+                <div className="flex items-center gap-2 text-white/90 bg-white/5 px-4 py-1.5 rounded-xl border border-white/10 select-none shadow-inner" title="Horário Atual">
+                    <div className="flex flex-col items-center">
+                        <span className="font-mono text-xl font-bold tracking-[0.15em] tabular-nums leading-none">
+                            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="text-[10px] uppercase font-bold tracking-tighter text-[#75CEBF] opacity-80 leading-none mt-1 min-w-[60px] text-center">
+                            {time.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}
+                        </span>
+                    </div>
                 </div>
             </header>
 
@@ -109,12 +112,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                 {user?.role === 'reception' ? 'Recepção' : (user?.specialty || 'Médico Cooperado')}
                             </span>
                         </div>
-                    </div>
-                    <div className="hidden md:flex items-center gap-2 text-white/90 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-md shadow-sm select-none h-[42px]" title="Horário Local">
-                        <span className="material-symbols-outlined text-sm">schedule</span>
-                        <span className="font-mono text-sm font-bold tracking-widest tabular-nums">
-                            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
                     </div>
 
                 </div>
@@ -197,6 +194,19 @@ const Navbar: React.FC<NavbarProps> = ({
                         <span className="material-symbols-outlined text-xl">
                             {isDarkMode ? 'light_mode' : 'dark_mode'}
                         </span>
+                    </button>
+
+                    <button
+                        onClick={onToggleNotifications}
+                        className="size-9 flex items-center justify-center rounded text-white hover:bg-white/10 transition-colors relative"
+                        title="Mural de Avisos"
+                    >
+                        <span className="material-symbols-outlined text-xl">notifications</span>
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 size-5 bg-red-600 text-white text-[10px] font-black rounded-full border-2 border-primary flex items-center justify-center shadow-lg animate-in zoom-in duration-300">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                        )}
                     </button>
 
                     <button

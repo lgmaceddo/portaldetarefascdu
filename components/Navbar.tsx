@@ -59,17 +59,17 @@ const Navbar: React.FC<NavbarProps> = ({
             {/* --- HEADER PART 1: Brand & Identity (Dark Green) --- */}
             <header className="bg-primary-dark h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-md">
                 <div className="flex items-center gap-4">
-                    <div className="bg-white/10 p-1.5 rounded-lg backdrop-blur-sm border border-white/10">
+                    <div className="flex items-center justify-center bg-[#10605B] p-1 rounded-lg overflow-hidden shadow-inner">
                         <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/2/22/Unimed_Logo.svg"
-                            alt="Unimed"
-                            className="h-6 w-auto brightness-0 invert"
+                            src="/unimed-logo-final.png"
+                            alt="Unimed Bauru"
+                            className="h-14 w-auto object-contain hover:scale-110 transition-transform duration-300"
                         />
                     </div>
-                    <div className="hidden md:block w-px h-8 bg-white/20"></div>
+                    <div className="hidden md:block w-px h-10 bg-white/20"></div>
                     <div>
-                        <h1 className="text-white font-bold text-lg leading-tight uppercase tracking-wide">PORTAL DE TAREFAS CDU</h1>
-                        <p className="text-white/60 text-[10px] uppercase tracking-wider hidden sm:block">9º ANDAR - OFTALMOLOGIA</p>
+                        <h1 className="text-white font-bold text-lg leading-none uppercase tracking-wide">PORTAL DE TAREFAS CDU</h1>
+                        <p className="text-[#75CEBF] font-bold text-sm uppercase tracking-wide hidden sm:block -mt-1 drop-shadow-sm">9º ANDAR - OFTALMOLOGIA</p>
                     </div>
                 </div>
                 <div className="text-white/90 font-script text-xl hidden lg:block tracking-wide">
@@ -124,65 +124,67 @@ const Navbar: React.FC<NavbarProps> = ({
 
                     {/* --- INTERACTIVE UNITS DROPDOWNS --- */}
                     <div className="hidden md:flex items-center gap-2 mr-4">
-                        {['CDU', 'SEDE', 'GERENCIA'].map(unitKey => {
-                            const data = unitsData[unitKey];
-                            if (!data) return null; // Safety check
-                            return (
-                                <div key={unitKey} className="relative group">
-                                    {/* Trigger Button */}
-                                    <button className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded transition-colors uppercase border border-white/5 cursor-pointer">
-                                        {unitKey}
-                                    </button>
+                        {
+                            ['CDU', 'SEDE', 'GERENCIA'].map(unitKey => {
+                                const data = unitsData[unitKey];
+                                if (!data) return null; // Safety check
+                                return (
+                                    <div key={unitKey} className="relative group">
+                                        {/* Trigger Button */}
+                                        <button className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded transition-colors uppercase border border-white/5 cursor-pointer">
+                                            {unitKey}
+                                        </button>
 
-                                    {/* Hover Popover (Card) */}
-                                    <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out z-50 w-[320px]">
-                                        <div className="bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden relative">
+                                        {/* Hover Popover (Card) */}
+                                        <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out z-50 w-[320px]">
+                                            <div className="bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden relative">
 
-                                            {/* Header of Card */}
-                                            <div className="bg-[#f0fdf4] p-4 border-b border-gray-100 flex justify-between items-start gap-2">
-                                                <h4 className="text-[#10605B] font-bold text-xs uppercase tracking-wide leading-relaxed">
-                                                    {data.title}
-                                                </h4>
-                                                <button
-                                                    onClick={() => onEditUnitClick(unitKey)}
-                                                    className="text-gray-400 hover:text-[#10605B] transition-colors"
-                                                    title="Editar Informações"
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">edit</span>
-                                                </button>
-                                            </div>
+                                                {/* Header of Card */}
+                                                <div className="bg-[#f0fdf4] p-4 border-b border-gray-100 flex justify-between items-start gap-2">
+                                                    <h4 className="text-[#10605B] font-bold text-xs uppercase tracking-wide leading-relaxed">
+                                                        {data.title}
+                                                    </h4>
+                                                    <button
+                                                        onClick={() => onEditUnitClick(unitKey)}
+                                                        className="text-gray-400 hover:text-[#10605B] transition-colors"
+                                                        title="Editar Informações"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">edit</span>
+                                                    </button>
+                                                </div>
 
-                                            {/* Body of Card */}
-                                            <div className="p-4 space-y-4">
-                                                {data.items.map(item => (
-                                                    <div key={item.id} className="flex gap-3 items-start">
-                                                        <div className={`p-1.5 rounded-md shrink-0 flex items-center justify-center ${isWhatsApp(item.type) ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'
-                                                            }`}>
-                                                            <span className="material-symbols-outlined text-sm">
-                                                                {isWhatsApp(item.type) ? 'chat' : getIconForType(item.type)}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            {item.label && (
-                                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-0.5">
-                                                                    {item.label}
+                                                {/* Body of Card */}
+                                                <div className="p-4 space-y-4">
+                                                    {data.items.map(item => (
+                                                        <div key={item.id} className="flex gap-3 items-start">
+                                                            <div className={`p-1.5 rounded-md shrink-0 flex items-center justify-center ${isWhatsApp(item.type) ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'
+                                                                }`}>
+                                                                <span className="material-symbols-outlined text-sm">
+                                                                    {isWhatsApp(item.type) ? 'chat' : getIconForType(item.type)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                {item.label && (
+                                                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-0.5">
+                                                                        {item.label}
+                                                                    </p>
+                                                                )}
+                                                                <p className="text-xs text-gray-700 font-medium break-words leading-snug">
+                                                                    {item.value}
                                                                 </p>
-                                                            )}
-                                                            <p className="text-xs text-gray-700 font-medium break-words leading-snug">
-                                                                {item.value}
-                                                            </p>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                                {data.items.length === 0 && (
-                                                    <p className="text-xs text-gray-400 text-center italic">Nenhuma informação cadastrada.</p>
-                                                )}
+                                                    ))}
+                                                    {data.items.length === 0 && (
+                                                        <p className="text-xs text-gray-400 text-center italic">Nenhuma informação cadastrada.</p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })
+                        }
                     </div>
 
                     <div className="h-6 w-px bg-white/20 hidden md:block mx-1"></div>
@@ -205,7 +207,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         <span className="material-symbols-outlined text-xl">logout</span>
                     </button>
                 </div>
-            </div >
+            </div>
         </>
     );
 };

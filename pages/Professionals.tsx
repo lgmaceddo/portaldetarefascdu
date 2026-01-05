@@ -30,7 +30,7 @@ const Professionals: React.FC = () => {
 
             if (data) {
                 // Map Supabase profile to Doctor type
-                const mappedDoctors: Doctor[] = data.map(p => ({
+                const mappedDoctors: Doctor[] = data.map((p: any) => ({
                     id: p.id,
                     name: p.name || 'Sem Nome',
                     specialty: p.specialty || 'Geral',
@@ -54,7 +54,7 @@ const Professionals: React.FC = () => {
         // Subscribe to realtime changes
         const channel = supabase
             .channel('public:profiles:doctor')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: 'role=eq.doctor' }, (payload) => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: 'role=eq.doctor' }, (payload: any) => {
                 fetchProfessionals(); // Refresh on any change
             })
             .subscribe();
@@ -69,7 +69,7 @@ const Professionals: React.FC = () => {
         setSearch(e.target.value);
     };
 
-    const filtered = professionals.filter(p =>
+    const filtered = professionals.filter((p: Doctor) =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.specialty.toLowerCase().includes(search.toLowerCase())
     );

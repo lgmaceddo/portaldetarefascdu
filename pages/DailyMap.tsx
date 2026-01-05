@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Doctor } from '../../types';
+import { Doctor } from '../types';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
 
 // --- Types Local to this Component ---
 interface Room {
@@ -55,31 +56,54 @@ const DailyMap: React.FC = () => {
     });
 
     const [doctors, setDoctors] = useState<Doctor[]>([]);
+    const [doctorSearch, setDoctorSearch] = useState('');
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
     // Ref specifically for the visible report inside the modal
     const reportRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const loadDoctors = () => {
-            const saved = localStorage.getItem('mediportal_professionals');
-            if (saved) {
-                setDoctors(JSON.parse(saved));
-            } else {
-                const INITIAL_DOCTORS: Doctor[] = [
-                    { id: 'd1', name: 'Dr. Ricardo Silva', specialty: 'Cardiologia', phone: '(14) 99881-0001', avatar: '', color: '', status: 'active' },
-                    { id: 'd2', name: 'Dra. Ana Souza', specialty: 'Pediatria', phone: '(14) 99881-0002', avatar: '', color: '', status: 'active' },
-                    { id: 'd3', name: 'Dr. Paulo Mendes', specialty: 'Ultrassom', phone: '(14) 99881-0003', avatar: '', color: '', status: 'active' },
-                    { id: 'd4', name: 'Dra. Carla Diaz', specialty: 'Dermatologia', phone: '(14) 99881-0004', avatar: '', color: '', status: 'active' },
-                    { id: 'd5', name: 'Dr. Roberto Cruz', specialty: 'Ortopedia', phone: '(14) 99881-0005', avatar: '', color: '', status: 'active' },
-                ];
-                setDoctors(INITIAL_DOCTORS);
-                localStorage.setItem('mediportal_professionals', JSON.stringify(INITIAL_DOCTORS));
+    // Fetch Doctors from Supabase
+    const fetchDoctors = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'doctor');
+
+            if (error) throw error;
+
+            if (data) {
+                const mapped: Doctor[] = data.map((p: any) => ({
+                    id: p.id,
+                    name: p.name || 'Sem Nome',
+                    specialty: p.specialty || 'Médico',
+                    phone: p.phone || '',
+                    avatar: p.avatar || '',
+                    color: p.color || '',
+                    status: (p.status as any) || 'active',
+                    isAdmin: p.is_admin
+                }));
+                setDoctors(mapped);
             }
+        } catch (error) {
+            console.error('Error fetching doctors:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchDoctors();
+
+        // Subscribe to realtime changes
+        const channel = supabase
+            .channel('public:profiles:doctors_map')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: 'role=eq.doctor' }, () => {
+                fetchDoctors();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
         };
-        loadDoctors();
-        window.addEventListener('storage', loadDoctors);
-        return () => window.removeEventListener('storage', loadDoctors);
     }, []);
 
     // Modals State
@@ -231,6 +255,7 @@ const DailyMap: React.FC = () => {
         // Basic guard clause, although UI should prevent this too
         if (!canEdit) return;
         setSelectedSlot({ roomId, shift });
+        setDoctorSearch(''); // Reset search
         setShowAllocationModal(true);
     };
 
@@ -504,8 +529,8 @@ const DailyMap: React.FC = () => {
                                     onClick={handleDownloadPDF}
                                     disabled={isGeneratingPdf}
                                     className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-all duration-300 ${isGeneratingPdf
-                                            ? 'bg-gray-400 text-white cursor-not-allowed scale-95'
-                                            : 'bg-primary hover:bg-primary-dark text-white hover:shadow-md'
+                                        ? 'bg-gray-400 text-white cursor-not-allowed scale-95'
+                                        : 'bg-primary hover:bg-primary-dark text-white hover:shadow-md'
                                         }`}
                                 >
                                     {isGeneratingPdf ? (
@@ -652,34 +677,45 @@ const DailyMap: React.FC = () => {
                                 <input
                                     type="text"
                                     placeholder="Buscar profissional..."
+                                    value={doctorSearch}
+                                    onChange={(e) => setDoctorSearch(e.target.value)}
                                     className="w-full text-sm p-2 border border-gray-200 rounded-lg focus:border-primary outline-none bg-gray-50"
                                 />
                             </div>
-                            {doctors.length > 0 ? (
-                                doctors.map(doctor => {
-                                    const style = getDoctorStyle(doctor.name);
-                                    return (
-                                        <button
-                                            key={doctor.id}
-                                            onClick={() => handleAssignDoctor(doctor.id)}
-                                            className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors border-b border-gray-50 last:border-0 text-left group"
-                                        >
-                                            <div className={`size-10 rounded-full flex items-center justify-center font-bold text-xs tracking-wider border bg-white ${style.text} ${style.bg} ${style.border}`}>
-                                                {getInitials(doctor.name)}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-sm text-gray-800 truncate">{doctor.name}</p>
-                                                <p className="text-xs text-gray-500 truncate">{doctor.specialty}</p>
-                                            </div>
-                                            <span className="material-symbols-outlined text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">add_circle</span>
-                                        </button>
-                                    );
-                                })
-                            ) : (
-                                <div className="text-center py-4 text-gray-400 text-xs">
-                                    Nenhum profissional cadastrado.
-                                </div>
-                            )}
+                            {(() => {
+                                const filtered = doctors.filter(d =>
+                                    d.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+                                    d.specialty.toLowerCase().includes(doctorSearch.toLowerCase())
+                                );
+
+                                if (filtered.length > 0) {
+                                    return filtered.map(doctor => {
+                                        const style = getDoctorStyle(doctor.name);
+                                        return (
+                                            <button
+                                                key={doctor.id}
+                                                onClick={() => handleAssignDoctor(doctor.id)}
+                                                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors border-b border-gray-50 last:border-0 text-left group"
+                                            >
+                                                <div className={`size-10 rounded-full flex items-center justify-center font-bold text-xs tracking-wider border bg-white ${style.text} ${style.bg} ${style.border}`}>
+                                                    {getInitials(doctor.name)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-sm text-gray-800 truncate">{doctor.name}</p>
+                                                    <p className="text-xs text-gray-500 truncate">{doctor.specialty}</p>
+                                                </div>
+                                                <span className="material-symbols-outlined text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">add_circle</span>
+                                            </button>
+                                        );
+                                    });
+                                }
+
+                                return (
+                                    <div className="text-center py-4 text-gray-400 text-xs">
+                                        Nenhum profissional encontrado.
+                                    </div>
+                                );
+                            })()}
 
                             {selectedSlot && getAllocation(selectedSlot.roomId, selectedSlot.shift) && (
                                 <button

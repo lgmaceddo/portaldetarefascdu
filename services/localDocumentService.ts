@@ -104,39 +104,48 @@ interface ParsedAppointment {
  */
 export const parseAgendaText = (text: string): ParsedAppointment[] => {
     const lines = text.split('\n');
-    const appointments: ParsedAppointment[] = [];
+    let appointments: ParsedAppointment[] = [];
 
     // Global Metadata
     let globalDoctor = '';
     let globalDate = '';
 
     // Patterns
-    const timePattern = /(\d{2}:\d{2})\s?-\s?(\d{2}:\d{2})/;
-    const singleTimePattern = /(\d{2}:\d{2})/;
+    // Range Pattern: Forces presence of a dash (hyphen or en-dash)
+    const timePattern = /(\d{2}:\d{2})\s*[-–]\s*(\d{2}:\d{2})?/;
+    // Single Pattern: Starts with time, capturing it.
+    const singleTimePattern = /^(\d{2}:\d{2})/;
+
+    // Date/Phone
     const datePattern = /(\d{2}\/\d{2}\/\d{4})/;
     const phonePattern = /(?:\(?\d{2}\)?\s?)?(?:9?\d{4}[-\.\s]?\d{4})/;
 
-    // Keywords Lists (Comprehensive)
-    const badLines = ['LIVRE', 'BLOQUEIO', 'Agenda do Dia', 'Relatório', 'Página', 'Impresso em', 'Emissão'];
+    // Keywords Lists
+    // Removed 'LIVRE' so we can track free slots
+    const badLines = ['BLOQUEIO', 'Agenda do Dia', 'Relatório', 'Página', 'Impresso em', 'Emissão', 'Total', 'Qtde'];
 
-    // Status - usually at end
-    const statusKeywords = ['Confirmado', 'Realizado', 'Falta', 'Agendado', 'Desistencia', 'Cancelado'];
+    // Status
+    const statusKeywords = ['Confirmado', 'Realizado', 'Falta', 'Agendado', 'Desistencia', 'Cancelado', 'Atendido', 'Em Atendimento'];
 
-    // Insurance - usually column 4
+    // Junk Terms
+    const junkTerms = [
+        'Unimed', 'Particular', 'Cassi', 'Iamspe', 'Bradesco', 'Sulamerica', 'Allianz', 'Porto Seguro',
+        'Amil', 'Mediservice', 'Fusex', 'Apas', 'Cabesp', 'Geap', 'Saude Caixa', 'Postal Saude',
+        'Intercambio', 'Intercâmbio', 'Bauru', 'Cooperado', 'Beneficiario', 'Dependente', 'Titular',
+        'Consulta', 'Retorno', 'Exame', 'Procedimento', 'Cirurgia', 'Avaliação', 'Ecografia', 'Bioimpedancia', 'Teste Cutaneo', 'Imunoterapia', 'Pequena Cirurgia'
+    ];
+
     const insuranceKeywords = [
         'Unimed', 'Particular', 'Cassi', 'Iamspe', 'Bradesco', 'Sulamerica', 'Allianz', 'Porto Seguro',
         'Amil', 'Mediservice', 'Fusex', 'Apas', 'Cabesp', 'Geap', 'Saude Caixa', 'Postal Saude'
     ];
 
-    // Event/Procedure - usually column 3
     const eventKeywords = [
         'Consulta', 'Retorno de Consulta', 'Retorno', 'Exame', 'Procedimento', 'Cirurgia', 'Avaliação',
         'Ecografia', 'Bioimpedancia', 'Teste Cutaneo', 'Imunoterapia', 'Pequena Cirurgia'
     ];
-    // Sort logic: longest first to avoid partial matches (e.g. "Retorno de Consulta" vs "Retorno")
     eventKeywords.sort((a, b) => b.length - a.length);
     insuranceKeywords.sort((a, b) => b.length - a.length);
-
 
     // Helper to strip keywords
     const stripKeywords = (input: string, list: string[]): { cleaned: string, found: string[] } => {
@@ -169,25 +178,45 @@ export const parseAgendaText = (text: string): ParsedAppointment[] => {
     }
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+        let line = lines[i];
 
-        // Validation: Must have time
-        const timeRange = line.match(timePattern);
-        const singleTime = line.match(singleTimePattern);
+        // Clean invisible chars
+        line = line.replace(/[\u0000-\u001F\u007F-\u009F]/g, " ").trim();
+        if (!line) continue;
 
-        // --- MULTILINE HANDLING ---
-        // If line has NO time, check if it's a continuation of the previous appointment's name
-        if (!timeRange && !singleTime) {
+        // --- CORE STRATEGY ---
+        // New Appointment = Matches "Start - End" or "Start -" pattern
+        // Continuation    = No match OR Matches only "Start" (no dash)
+
+        const rangeMatch = line.match(timePattern);
+        const singleMatch = line.match(singleTimePattern);
+
+        // If it looks like a range (13:00 - 13:15) OR (13:00 - ) -> It's a New Appointment
+        const isNewAppointment = !!rangeMatch;
+
+        if (!isNewAppointment) {
+            // It is a continuation line or junk
+            // Check major junk
+            if (badLines.some(bl => line.toUpperCase().includes(bl.toUpperCase()))) continue;
+
             if (appointments.length > 0) {
                 const prev = appointments[appointments.length - 1];
 
-                // Heuristic checks
-                const isMetadata = line.match(/(Página|Impresso|Emissão|Unimed|Relatório|Dr\.|Data:)/i);
+                let contentLine = line;
 
-                if (!isMetadata && line.trim().length > 2) {
-                    // The continuation line might ALSO contain wrapped column data (Event, Insurance, etc)
-                    // So we must strip them from here too
-                    let continuation = line.trim();
+                // SPECIAL HANDLER: Line starts with a Single Time (no dash) like "16:40 RIBEIRO"
+                // This is the "End Time" line acting as a wrapper.
+                // We MUST strip the time.
+                if (singleMatch) {
+                    contentLine = contentLine.replace(singleMatch[0], '').trim();
+                }
+
+                // Clean Junk
+                const cleanLineUpper = contentLine.trim().toUpperCase();
+                const isJunk = junkTerms.some(term => cleanLineUpper.includes(term.toUpperCase()));
+
+                if (!isJunk && contentLine.length > 1) {
+                    let continuation = contentLine;
 
                     // Remove Phones
                     const foundPhones = continuation.match(new RegExp(phonePattern, 'g'));
@@ -197,22 +226,15 @@ export const parseAgendaText = (text: string): ParsedAppointment[] => {
                     const resStatus = stripKeywords(continuation, statusKeywords);
                     continuation = resStatus.cleaned;
 
-                    // Remove Insurance & Event keywords from continuation line
-                    const resIns = stripKeywords(continuation, insuranceKeywords);
-                    continuation = resIns.cleaned;
-
-                    const resEvt = stripKeywords(continuation, eventKeywords);
-                    continuation = resEvt.cleaned;
-
-                    // Cleanup formatting
+                    // Cleanup
                     continuation = continuation
                         .replace(/[-–]/g, '')
                         .replace(/\s+/g, ' ')
-                        .replace(/\sPP$/, '').replace(/^PP\s/, '') // Remove PP artifact
+                        .replace(/\d+/g, '')
+                        .replace(/\sPP$/, '').replace(/^PP\s/, '')
                         .trim();
 
-                    // Only append if there's actual text left (part of the name)
-                    if (continuation.length > 0) {
+                    if (continuation.length > 1 && !continuation.match(/^[0-9\W]+$/)) {
                         prev.patientName = `${prev.patientName} ${continuation}`.trim();
                     }
                 }
@@ -220,28 +242,24 @@ export const parseAgendaText = (text: string): ParsedAppointment[] => {
             continue;
         }
 
-        // Use the start time from range if available, else single found time
-        const startTime = timeRange ? timeRange[1] : (singleTime ? singleTime[1] : '');
-        if (!startTime) continue;
+        // --- NEW APPOINTMENT PROCESSING ---
+        // We know it matched timePattern, so rangeMatch is valid.
+        const startTime = rangeMatch[1];
+        // optional group 2 is end time
 
-        // Filter bad lines
-        if (badLines.some(bl => line.toUpperCase().includes(bl))) continue;
+        if (badLines.some(bl => line.toUpperCase().includes(bl.toUpperCase()))) continue;
 
-        // "Processing Strategy"
-        let remaining = line;
+        let remaining = line.replace(rangeMatch[0], '').trim();
+        remaining = remaining.replace(/^[-–]\s*/, ''); // Extra cleanup of dash
 
-        // 1. Remove Time Part (First occurance)
-        remaining = remaining.replace(timeRange ? timeRange[0] : startTime, '').trim();
-
-        // 2. Extract Status
+        // Extract Status
         let status = 'Agendado';
         const resStatus = stripKeywords(remaining, statusKeywords);
         remaining = resStatus.cleaned;
-        if (resStatus.found.length > 0) status = resStatus.found[0]; // Take first found status
-        // Capitalize status
+        if (resStatus.found.length > 0) status = resStatus.found[0];
         status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 
-        // 3. Extract Contact (Phone)
+        // Extract Contact
         const foundPhones = remaining.match(new RegExp(phonePattern, 'g'));
         let contact = '';
         if (foundPhones) {
@@ -249,32 +267,23 @@ export const parseAgendaText = (text: string): ParsedAppointment[] => {
             foundPhones.forEach(p => remaining = remaining.replace(p, ''));
         }
 
-        // 4. Extract Insurance
-        // We strip all found keywords to clean the name, but keep the first one as the 'Value'
-        const resIns = stripKeywords(remaining, insuranceKeywords);
-        remaining = resIns.cleaned;
-        const insurance = resIns.found.length > 0 ? resIns.found[0] : '';
+        // Extract Metadata
+        const resJunk = stripKeywords(remaining, junkTerms);
+        remaining = resJunk.cleaned;
+        let insurance = resJunk.found.find(k => insuranceKeywords.includes(k)) || '';
+        let event = resJunk.found.find(k => eventKeywords.includes(k)) || '';
 
-        // 5. Extract Event
-        // We strip all found keywords, keep first as Value
-        const resEvt = stripKeywords(remaining, eventKeywords);
-        remaining = resEvt.cleaned;
-        const event = resEvt.found.length > 0 ? resEvt.found[0] : '';
-
-        // 6. Name is what's left
+        // Name
         let name = remaining
-            .replace(/[-–]/g, '') // Remove stray dashes
-            .replace(/\s+/g, ' ') // Collapse spaces
+            .replace(/[-–]/g, '')
+            .replace(/\s+/g, ' ')
+            .replace(/\d+/g, '')
             .trim();
 
-        // Clean leading/trailing non-letters
         name = name.replace(/^[^a-zA-Z]+/, '').replace(/[^a-zA-Z]+$/, '');
-
-        // Specific Fix: Remove " PP" suffix or "PP" standalone if present at end
         name = name.replace(/\sPP$/, '').replace(/^PP\s/, '');
 
-        // Minimal length check
-        if (name.length < 3) continue;
+        if (name.length < 3 && !name.toUpperCase().includes('LIVRE')) continue;
 
         appointments.push({
             patientName: name,
@@ -288,9 +297,26 @@ export const parseAgendaText = (text: string): ParsedAppointment[] => {
         });
     }
 
+    // FINAL PASS: Filter out "Fake" appointments that might have slipped through
+    // e.g. if a line was read as an appointment but the name is just "Intercambio" or empty
+    appointments = appointments.filter(appt => {
+        const n = appt.patientName.toUpperCase();
+        // Check if the name is just a single junk term or too short
+        const isJunkName = junkTerms.some(t => n === t.toUpperCase());
+        // Allow shorter names if it is explicitly "LIVRE"
+        if (n.includes('LIVRE')) return true;
+        return !isJunkName && n.length > 2;
+    }).map(appt => {
+        // User Request: Keep only the first two names (e.g. "ISABELA ROMEIRO CINTRA" -> "ISABELA ROMEIRO")
+        const parts = appt.patientName.split(/\s+/);
+        if (parts.length > 2) {
+            appt.patientName = parts.slice(0, 2).join(' ');
+        }
+        return appt;
+    });
+
     return appointments;
 };
-
 
 export const generateLocalMessage = (
     data: ParsedAppointment,
@@ -356,30 +382,34 @@ export const processDocumentLocally = async (
 
     const text = await extractTextFromPDF(file);
     console.log("Raw Extracted Text Sample:", text.substring(0, 500));
-    const appointments = parseAgendaText(text);
-    console.log("Parsed Appointments:", appointments.length);
+    const allAppointments = parseAgendaText(text);
+    console.log("Parsed Appointments (Total):", allAppointments.length);
+
+    // Filter Free Slots vs Valid Appointments
+    const freeSlots = allAppointments.filter(a => a.patientName.toUpperCase().includes('LIVRE'));
+    const validAppointments = allAppointments.filter(a => !a.patientName.toUpperCase().includes('LIVRE'));
+
+    console.log(`Valid: ${validAppointments.length}, Free: ${freeSlots.length}`);
 
     // DAILY SUMMARY LOGIC (Aggregated)
     if (type === 'daily_summary') {
-        const total = appointments.length;
-        const confirmed = appointments.filter(a => a.status.toLowerCase().includes('confirmado')).length;
+        const total = validAppointments.length;
+        const confirmed = validAppointments.filter(a => a.status.toLowerCase().includes('confirmado')).length;
         // Count anything not confirmed as pending for now, or simplify
         const pending = total - confirmed;
 
-        const firstTime = appointments[0]?.time || "00:00";
-        const lastTime = appointments[appointments.length - 1]?.time || "00:00";
-        const doctor = appointments[0]?.doctor || "[Médico]";
-        const date = appointments[0]?.date || "[Data]";
+        const firstTime = validAppointments[0]?.time || "00:00";
+        const lastTime = validAppointments[validAppointments.length - 1]?.time || "00:00";
+        const doctor = validAppointments[0]?.doctor || "[Médico]";
+        const date = validAppointments[0]?.date || "[Data]";
 
         const fmt = (n: number) => n < 10 ? `0${n}` : `${n}`;
 
-        // Accurate counts based on parsed Procedure/EventType
-        const primary = appointments.filter(a => a.procedure?.toLowerCase().includes('primeira')).length;
-        const routine = appointments.filter(a => a.procedure?.toLowerCase().includes('consulta') && !a.procedure?.toLowerCase().includes('primeira')).length; // General consults
-        const returns = appointments.filter(a => a.procedure?.toLowerCase().includes('retorno')).length;
-
-        // Fallback: If no procedures detected (0), maybe everything is just "Consulta"?
-        // Just leave as is, user will see 00 and can edit.
+        // Free Slots Formatting
+        let freeSlotsText = 'Nenhum horário livre identificado.';
+        if (freeSlots.length > 0) {
+            freeSlotsText = freeSlots.map(s => s.time).join('\n');
+        }
 
         const message = `Olá DR. "${doctor}" tudo bem!
 
@@ -388,19 +418,15 @@ Segue o resumo da sua agenda do dia ${date} até o momento:
 📅 Período de atendimento: ${firstTime} às ${lastTime}
 👥 Total de pacientes agendados: ${fmt(total)}
 
-🧾 Distribuição dos atendimentos:
-
-${fmt(primary)} - Primeira Consulta
-${fmt(routine)} - Consulta / Segunda Consulta
-${fmt(returns)} - Retorno
-
 📌 Status dos agendamentos:
 
 ${fmt(confirmed)} - atendimentos confirmados
 ${fmt(pending)} - atendimento agendado (pendente de confirmação)
 
 🕒 Horário livre:
-Verificar manualmente na grade.
+${freeSlotsText}
+
+Qualquer dúvida, estamos à disposição.
 
 Obrigado,
 ${userName}`;
@@ -418,8 +444,8 @@ ${userName}`;
         };
     }
 
-    // NORMAL LIST LOGIC
-    const results: DocumentAnalysisResult[] = appointments.map(appt => ({
+    // NORMAL LIST LOGIC - Only return VALID appointments (exclude 'Livre')
+    const results: DocumentAnalysisResult[] = validAppointments.map(appt => ({
         extractedData: {
             patientName: appt.patientName,
             doctorName: appt.doctor || "",

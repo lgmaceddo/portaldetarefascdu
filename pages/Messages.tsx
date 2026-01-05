@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Note, Doctor, Receptionist, NoteHistory, NoteStatus } from '../../types';
+import { Note, Doctor, Receptionist, NoteHistory, NoteStatus } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
 
 // Combined Recipient type for dropdown
 interface Recipient {
@@ -56,34 +57,45 @@ const Messages: React.FC = () => {
     const [recipientCategoryFilter, setRecipientCategoryFilter] = useState<'doctor' | 'reception'>('doctor');
     const recipientSelectorRef = useRef<HTMLDivElement>(null);
 
-    // --- Effects ---
+    // Fetch Recipients from Supabase
+    const fetchRecipients = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('role', ['doctor', 'reception']);
+
+            if (error) throw error;
+
+            if (data) {
+                const mappedRecipients: Recipient[] = data.map((p: any) => ({
+                    id: p.id,
+                    name: p.name || 'Sem Nome',
+                    description: p.specialty || (p.role === 'doctor' ? 'Médico' : 'Recepção'),
+                    type: p.role as 'doctor' | 'reception',
+                    avatar: p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name || 'U')}&background=${p.role === 'doctor' ? '00965e' : 'ef4444'}&color=fff`
+                }));
+                setRecipients(mappedRecipients);
+            }
+        } catch (error) {
+            console.error('Error fetching recipients:', error);
+        }
+    };
+
     useEffect(() => {
-        // Load Doctors
-        const savedDocs = localStorage.getItem('mediportal_professionals');
-        const doctors: Doctor[] = savedDocs ? JSON.parse(savedDocs) : [];
+        fetchRecipients();
 
-        // Load Receptionists
-        const savedRec = localStorage.getItem('mediportal_receptionists');
-        const receptionists: Receptionist[] = savedRec ? JSON.parse(savedRec) : [];
+        // Subscribe to profile changes
+        const channel = supabase
+            .channel('public:profiles:recipients')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+                fetchRecipients();
+            })
+            .subscribe();
 
-        const mappedRecipients: Recipient[] = [
-            ...doctors.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.specialty,
-                type: 'doctor' as const,
-                avatar: d.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=00965e&color=fff`
-            })),
-            ...receptionists.map(r => ({
-                id: r.id,
-                name: r.name,
-                description: r.sector,
-                type: 'reception' as const,
-                avatar: r.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name)}&background=ef4444&color=fff`
-            }))
-        ];
-
-        setRecipients(mappedRecipients);
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     useEffect(() => {
@@ -321,8 +333,8 @@ const Messages: React.FC = () => {
                         type="button"
                         onClick={(e) => openInteractionModal(note.id, 'reply', e)}
                         className={`font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm ${isModal
-                                ? 'px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base w-full md:w-auto'
-                                : 'px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs'
+                            ? 'px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base w-full md:w-auto'
+                            : 'px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs'
                             }`}
                     >
                         <span className={`material-symbols-outlined ${isModal ? 'text-xl' : 'text-sm'}`}>reply</span>
@@ -337,8 +349,8 @@ const Messages: React.FC = () => {
                             type="button"
                             onClick={(e) => openInteractionModal(note.id, 'return', e)}
                             className={`font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${isModal
-                                    ? 'flex-1 px-4 py-3 text-orange-600 bg-orange-50 hover:bg-orange-100 text-base border border-orange-200'
-                                    : 'p-1.5 text-orange-600 hover:bg-orange-50'
+                                ? 'flex-1 px-4 py-3 text-orange-600 bg-orange-50 hover:bg-orange-100 text-base border border-orange-200'
+                                : 'p-1.5 text-orange-600 hover:bg-orange-50'
                                 }`}
                             title="Devolver"
                         >
@@ -349,8 +361,8 @@ const Messages: React.FC = () => {
                             type="button"
                             onClick={(e) => handleComplete(note.id, e)}
                             className={`font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm ${isModal
-                                    ? 'flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 text-white text-base'
-                                    : 'px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs'
+                                ? 'flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 text-white text-base'
+                                : 'px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs'
                                 }`}
                         >
                             <span className={`material-symbols-outlined ${isModal ? 'text-xl' : 'text-sm'}`}>done</span>
@@ -364,8 +376,8 @@ const Messages: React.FC = () => {
                         type="button"
                         onClick={(e) => handleDelete(note.id, e)}
                         className={`font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${isModal
-                                ? 'px-4 py-3 text-red-500 hover:bg-red-50 text-base border border-red-100'
-                                : 'p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50'
+                            ? 'px-4 py-3 text-red-500 hover:bg-red-50 text-base border border-red-100'
+                            : 'p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50'
                             }`}
                         title="Excluir"
                     >
@@ -407,8 +419,8 @@ const Messages: React.FC = () => {
                 <button
                     onClick={() => setFilterStatus('active')}
                     className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 ${filterStatus === 'active'
-                            ? 'bg-primary text-white shadow-md'
-                            : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                         }`}
                 >
                     <span className="material-symbols-outlined text-lg">inbox</span>
@@ -417,8 +429,8 @@ const Messages: React.FC = () => {
                 <button
                     onClick={() => setFilterStatus('completed')}
                     className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 ${filterStatus === 'completed'
-                            ? 'bg-green-600 text-white shadow-md'
-                            : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        ? 'bg-green-600 text-white shadow-md'
+                        : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                         }`}
                 >
                     <span className="material-symbols-outlined text-lg">check_circle</span>
@@ -588,8 +600,8 @@ const Messages: React.FC = () => {
                                             <div className="flex gap-4">
                                                 <label className="flex items-center gap-1.5 cursor-pointer group select-none">
                                                     <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${recipientCategoryFilter === 'doctor'
-                                                            ? 'bg-primary border-primary'
-                                                            : 'border-gray-300 bg-white group-hover:border-primary'
+                                                        ? 'bg-primary border-primary'
+                                                        : 'border-gray-300 bg-white group-hover:border-primary'
                                                         }`}>
                                                         {recipientCategoryFilter === 'doctor' && <span className="material-symbols-outlined text-[10px] text-white font-bold">check</span>}
                                                     </div>
@@ -608,8 +620,8 @@ const Messages: React.FC = () => {
 
                                                 <label className="flex items-center gap-1.5 cursor-pointer group select-none">
                                                     <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${recipientCategoryFilter === 'reception'
-                                                            ? 'bg-secondary border-secondary'
-                                                            : 'border-gray-300 bg-white group-hover:border-secondary'
+                                                        ? 'bg-secondary border-secondary'
+                                                        : 'border-gray-300 bg-white group-hover:border-secondary'
                                                         }`}>
                                                         {recipientCategoryFilter === 'reception' && <span className="material-symbols-outlined text-[10px] text-white font-bold">check</span>}
                                                     </div>
@@ -896,7 +908,7 @@ const Messages: React.FC = () => {
                                 onClick={handleSubmitInteraction}
                                 disabled={!responseText.trim()}
                                 className={`px-8 py-3 text-white font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 ${!responseText.trim() ? 'bg-gray-300 cursor-not-allowed' :
-                                        interactionType === 'reply' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-500 hover:bg-orange-600'
+                                    interactionType === 'reply' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-500 hover:bg-orange-600'
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-lg">send</span>
@@ -1030,8 +1042,8 @@ const Messages: React.FC = () => {
                                                             </span>
                                                         </div>
                                                         <div className={`max-w-[80%] rounded-2xl p-4 text-sm shadow-sm ${hist.actor === 'doctor'
-                                                                ? 'bg-blue-50 text-blue-900 rounded-tr-none border border-blue-100'
-                                                                : 'bg-white text-gray-800 rounded-tl-none border border-gray-200'
+                                                            ? 'bg-blue-50 text-blue-900 rounded-tr-none border border-blue-100'
+                                                            : 'bg-white text-gray-800 rounded-tl-none border border-gray-200'
                                                             }`}>
                                                             <div className="flex justify-between items-baseline gap-6 mb-2 border-b border-black/5 pb-2">
                                                                 <span className="font-bold text-sm">{hist.actorName}</span>

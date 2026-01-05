@@ -1,0 +1,144 @@
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+interface NavItem {
+  name: string;
+  icon: string;
+  path?: string;
+  subItems?: { name: string; icon: string; path: string }[];
+}
+
+const Sidebar: React.FC = () => {
+  const location = useLocation();
+  const { user } = useAuth();
+  
+  // Define menu structure with requested order
+  const allNavItems: NavItem[] = [
+    { name: 'Dashboard', icon: 'dashboard', path: '/' },
+    { 
+      name: 'Agenda', 
+      icon: 'calendar_month', 
+      subItems: [
+        { name: 'Confirmar Consulta', icon: 'event_available', path: '/agenda/confirmacao' },
+        { name: 'Confirmar Procedimento', icon: 'fact_check', path: '/agenda/confirmar-procedimento' },
+        { name: 'Reagendamento', icon: 'edit_calendar', path: '/agenda/reagendamento' },
+        { name: 'Espelho Diário', icon: 'summarize', path: '/agenda/espelho-diario' },
+      ]
+    },
+    { name: 'Tarefas', icon: 'check_circle', path: '/tarefas' },
+    { name: 'Recados', icon: 'sticky_note_2', path: '/recados' },
+    { name: 'Mapa Diário', icon: 'map', path: '/mapa' },
+    { name: 'Scripts', icon: 'description', path: '/scripts' },
+    { name: 'Equipe Recepção', icon: 'groups', path: '/recepcao' },
+    { name: 'Profissionais', icon: 'manage_accounts', path: '/profissionais' },
+    { name: 'Usuários', icon: 'admin_panel_settings', path: '/usuarios' },
+    { name: 'Configurações', icon: 'settings', path: '/configuracoes' },
+  ];
+
+  // Filter items based on user role
+  const navItems = allNavItems.filter(item => {
+      // Doctor View: Restricted to Dashboard, Tarefas, Recados
+      if (user?.role === 'doctor') {
+          return ['Dashboard', 'Tarefas', 'Recados'].includes(item.name);
+      }
+      
+      // Reception View: Hide Dashboard, show everything else
+      if (user?.role === 'reception') {
+          return item.name !== 'Dashboard';
+      }
+
+      return true;
+  });
+
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(
+    location.pathname.includes('/agenda') ? ['Agenda'] : []
+  );
+
+  const toggleMenu = (name: string) => {
+    // Accordion behavior: Only allow one open at a time
+    setExpandedMenus(prev => 
+      prev.includes(name) 
+        ? [] // If clicking the currently open one, close it
+        : [name] // If clicking a new one, open it (this automatically closes others by replacing the array)
+    );
+  };
+
+  return (
+    <aside className="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col h-full shrink-0 transition-all duration-300 py-4">
+      <nav className="flex-1 flex flex-col gap-1 px-3 overflow-y-auto no-scrollbar">
+        {navItems.map((item) => (
+          <div key={item.name}>
+            {item.subItems ? (
+              // Parent Item (Collapsible)
+              <>
+                <button
+                  onClick={() => toggleMenu(item.name)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group text-sm font-medium ${
+                    location.pathname.includes(item.name.toLowerCase()) || expandedMenus.includes(item.name)
+                      ? 'text-primary-dark bg-primary-light' 
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                    <span className="ml-3 hidden lg:block">{item.name}</span>
+                  </div>
+                  <span className={`material-symbols-outlined text-sm hidden lg:block transition-transform duration-200 ${
+                    expandedMenus.includes(item.name) ? 'rotate-180' : ''
+                  }`}>
+                    expand_more
+                  </span>
+                </button>
+                
+                {/* Sub-items Container */}
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    expandedMenus.includes(item.name) ? 'max-h-52 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                }`}>
+                  <div className="flex flex-col gap-1 pl-0 lg:pl-3 relative ml-2 border-l-2 border-gray-100">
+                    {item.subItems.map((sub) => (
+                      <NavLink
+                        key={sub.path}
+                        to={sub.path}
+                        className={({ isActive }) =>
+                          `flex items-center px-3 py-2 rounded-r-lg transition-colors text-xs font-medium ${
+                            isActive
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                          }`
+                        }
+                      >
+                        <span className="material-symbols-outlined text-base mr-2">
+                            {sub.icon}
+                        </span>
+                        <span className="hidden lg:block">{sub.name}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              // Standard Link Item
+              <NavLink
+                to={item.path!}
+                onClick={() => setExpandedMenus([])} // Close any open accordion when navigating to a root item
+                className={({ isActive }) =>
+                  `flex items-center px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
+                    isActive
+                      ? 'bg-primary-light text-primary-dark shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`
+                }
+              >
+                <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                <span className="ml-3 hidden lg:block">{item.name}</span>
+              </NavLink>
+            )}
+          </div>
+        ))}
+      </nav>
+    </aside>
+  );
+};
+
+export default Sidebar;

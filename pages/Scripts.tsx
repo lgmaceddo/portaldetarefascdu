@@ -1,0 +1,588 @@
+import React, { useState, useEffect } from 'react';
+import { Script, ScriptCategory } from '../../types';
+import { useAuth } from '../contexts/AuthContext';
+
+// Mock Data for Categories
+const INITIAL_CATEGORIES: ScriptCategory[] = [
+    { id: 'cat1', name: 'APRESENTAÇÃO', order: 1 },
+    { id: 'cat2', name: 'QUESTIONÁRIOS', order: 2 },
+    { id: 'cat3', name: 'FINALIZAÇÕES', order: 3 },
+    { id: 'cat4', name: 'GUIAS', order: 4 },
+    { id: 'cat5', name: 'CADASTRO', order: 5 },
+    { id: 'cat6', name: 'ATESTADO', order: 6 },
+    { id: 'cat7', name: 'CONVÊNIOS', order: 7 },
+    { id: 'cat8', name: 'HORÁRIOS', order: 8 },
+];
+
+// Mock Data for Scripts
+// Updated script #1 to include placeholder [MEU_NOME] as an example of the new feature
+const INITIAL_SCRIPTS: Script[] = [
+    {
+        id: 's1',
+        categoryId: 'cat1',
+        title: 'ATENDIMENTO INICIAL',
+        content: 'Olá! Eu sou [MEU_NOME] da Central de Agendamento da Unimed Bauru. Para agilizar seu atendimento, por favor, informe seu Nome Completo e o número da sua carteirinha.',
+        order: 1
+    },
+    {
+        id: 's2',
+        categoryId: 'cat1',
+        title: 'CONFIRMAÇÃO DE DADOS',
+        content: 'Poderia confirmar, por favor, sua data de nascimento e um telefone para contato atualizado?',
+        order: 2
+    },
+    {
+        id: 's3',
+        categoryId: 'cat1',
+        title: 'CADASTRO NÃO LOCALIZADO',
+        content: 'Não localizei seu cadastro em nosso sistema. Poderia me enviar uma foto da sua carteirinha e do pedido médico?',
+        order: 3
+    },
+    {
+        id: 's4',
+        categoryId: 'cat1',
+        title: 'EXAMES IDENTIFICADOS',
+        content: 'Localizei os exames solicitados. Vou verificar a disponibilidade na agenda.',
+        order: 4
+    },
+    {
+        id: 's5',
+        categoryId: 'cat1',
+        title: 'PREFERÊNCIAS (Profissional/Período)',
+        content: 'Você tem preferência por algum médico específico ou período (manhã/tarde)?',
+        order: 5
+    },
+    {
+        id: 's6',
+        categoryId: 'cat1',
+        title: 'GUIA NÃO LOCALIZADA / AUTORIZADA',
+        content: 'Não localizei a autorização da guia no sistema. Por favor, entre em contato com o setor de autorizações ou envie a guia autorizada.',
+        order: 6
+    },
+    {
+        id: 's7',
+        categoryId: 'cat2',
+        title: 'QUESTIONÁRIO RESSONÂNCIA',
+        content: 'Para o exame de Ressonância, preciso fazer algumas perguntas de segurança. Você possui marcapasso, clipes de aneurisma ou implantes metálicos?',
+        order: 1
+    },
+];
+
+const Scripts: React.FC = () => {
+    const { user } = useAuth();
+
+    // State
+    const [categories, setCategories] = useState<ScriptCategory[]>(() => {
+        const saved = localStorage.getItem('mediportal_script_categories');
+        return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+    });
+
+    const [scripts, setScripts] = useState<Script[]>(() => {
+        const saved = localStorage.getItem('mediportal_scripts');
+        return saved ? JSON.parse(saved) : INITIAL_SCRIPTS;
+    });
+
+    const [selectedCategory, setSelectedCategory] = useState<string>(categories[0]?.id || '');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Modal States
+    const [isScriptModalOpen, setIsScriptModalOpen] = useState(false);
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [viewScript, setViewScript] = useState<Script | null>(null); // For viewing details
+    const [editingScript, setEditingScript] = useState<Script | null>(null);
+
+    // Category Editing State
+    const [editingCategory, setEditingCategory] = useState<ScriptCategory | null>(null);
+
+    // Feedback State
+    const [showCopyToast, setShowCopyToast] = useState(false);
+
+    // Forms
+    const [scriptForm, setScriptForm] = useState({ title: '', content: '', categoryId: '', order: 1 });
+    const [newCategoryName, setNewCategoryName] = useState('');
+
+    // Persist Data
+    useEffect(() => {
+        localStorage.setItem('mediportal_script_categories', JSON.stringify(categories));
+    }, [categories]);
+
+    useEffect(() => {
+        localStorage.setItem('mediportal_scripts', JSON.stringify(scripts));
+    }, [scripts]);
+
+    useEffect(() => {
+        // Ensure a category is selected on load
+        if (!selectedCategory && categories.length > 0) {
+            setSelectedCategory(categories[0].id);
+        }
+    }, [categories, selectedCategory]);
+
+    // --- Handlers: Scripts ---
+
+    const handleOpenScriptModal = (script?: Script) => {
+        if (script) {
+            setEditingScript(script);
+            setScriptForm({
+                title: script.title,
+                content: script.content,
+                categoryId: script.categoryId,
+                order: script.order
+            });
+        } else {
+            // Calculate next order for current category
+            const catScripts = scripts.filter(s => s.categoryId === selectedCategory);
+            const nextOrder = catScripts.length > 0 ? Math.max(...catScripts.map(s => s.order)) + 1 : 1;
+
+            setEditingScript(null);
+            setScriptForm({
+                title: '',
+                content: '',
+                categoryId: selectedCategory, // Default to current category
+                order: nextOrder
+            });
+        }
+        setIsScriptModalOpen(true);
+    };
+
+    const handleSaveScript = () => {
+        if (!scriptForm.title || !scriptForm.content || !scriptForm.categoryId) return;
+
+        if (editingScript) {
+            setScripts(prev => prev.map(s =>
+                s.id === editingScript.id ? { ...s, ...scriptForm } : s
+            ));
+        } else {
+            const newScript: Script = {
+                id: Date.now().toString(),
+                title: scriptForm.title,
+                content: scriptForm.content,
+                categoryId: scriptForm.categoryId,
+                order: scriptForm.order // Use manually entered order
+            };
+            setScripts([...scripts, newScript]);
+        }
+        setIsScriptModalOpen(false);
+    };
+
+    const handleDeleteScript = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (window.confirm("Excluir este script?")) {
+            setScripts(prev => prev.filter(s => s.id !== id));
+        }
+    };
+
+    // Helper to extract first two names
+    const getUserShortName = () => {
+        if (!user || !user.name) return '';
+        const parts = user.name.trim().split(/\s+/);
+        return parts.slice(0, 2).join(' ');
+    };
+
+    const handleCopy = (text: string) => {
+        // Automatic Name Injection Logic
+        let finalText = text;
+
+        // 1. Replace explicit placeholder [MEU_NOME] if it exists
+        if (text.includes('[MEU_NOME]')) {
+            finalText = text.replace(/\[MEU_NOME\]/g, getUserShortName());
+        }
+
+        navigator.clipboard.writeText(finalText);
+        setShowCopyToast(true);
+        setTimeout(() => setShowCopyToast(false), 2000);
+    };
+
+    // --- Handlers: Categories ---
+
+    const handleSaveCategory = () => {
+        if (!newCategoryName.trim()) return;
+
+        if (editingCategory) {
+            // Edit existing
+            setCategories(prev => prev.map(c =>
+                c.id === editingCategory.id ? { ...c, name: newCategoryName.toUpperCase() } : c
+            ));
+            setEditingCategory(null);
+        } else {
+            // Create new
+            const newCat: ScriptCategory = {
+                id: Date.now().toString(),
+                name: newCategoryName.toUpperCase(),
+                order: categories.length + 1
+            };
+            setCategories([...categories, newCat]);
+        }
+        setNewCategoryName('');
+    };
+
+    const handleEditCategoryStart = (cat: ScriptCategory) => {
+        setEditingCategory(cat);
+        setNewCategoryName(cat.name);
+    };
+
+    const handleCancelCategoryEdit = () => {
+        setEditingCategory(null);
+        setNewCategoryName('');
+    };
+
+    const handleDeleteCategory = (id: string) => {
+        if (window.confirm("Excluir esta categoria? Todos os scripts nela serão perdidos.")) {
+            setCategories(prev => prev.filter(c => c.id !== id));
+            setScripts(prev => prev.filter(s => s.categoryId !== id));
+            if (selectedCategory === id && categories.length > 1) {
+                setSelectedCategory(categories.find(c => c.id !== id)?.id || '');
+            }
+            if (editingCategory?.id === id) {
+                handleCancelCategoryEdit();
+            }
+        }
+    };
+
+    // --- Filtering ---
+    const filteredScripts = scripts
+        .filter(s => {
+            const matchesCategory = s.categoryId === selectedCategory;
+            const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+            return matchesCategory && matchesSearch;
+        })
+        .sort((a, b) => a.order - b.order);
+
+    return (
+        <div className="flex flex-col h-full gap-6 relative">
+
+            {/* Copy Toast Notification */}
+            {showCopyToast && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3">
+                        <span className="material-symbols-outlined text-[#25D366]">check_circle</span>
+                        <span className="text-sm font-bold">Copiado! Nome inserido automaticamente.</span>
+                    </div>
+                </div>
+            )}
+
+            {/* --- STANDARDIZED HEADER (Matches Tasks.tsx) --- */}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Scripts de Atendimento</h2>
+                    <p className="text-gray-500">Padronização e agilidade na comunicação.</p>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => { setIsCategoryModalOpen(true); handleCancelCategoryEdit(); }}
+                        className="bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-lg">settings</span>
+                        Categorias
+                    </button>
+                    <button
+                        onClick={() => handleOpenScriptModal()}
+                        className="bg-secondary text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors flex items-center gap-2 shadow-sm hover:shadow-md"
+                    >
+                        <span className="material-symbols-outlined">add</span>
+                        Novo Script
+                    </button>
+                </div>
+            </div>
+
+            {/* --- SEARCH & CATEGORY FILTERS (Standardized) --- */}
+            <div className="flex flex-col gap-4">
+                {/* Search Bar */}
+                <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar no conteúdo dos scripts..."
+                        className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary outline-none text-sm bg-white shadow-sm placeholder-gray-400"
+                    />
+                </div>
+
+                {/* Categories Horizontal Scroll - Pill Style */}
+                <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={`px-4 py-2 rounded-full text-sm font-bold uppercase whitespace-nowrap transition-all border ${selectedCategory === cat.id
+                                    ? 'bg-primary text-white border-primary shadow-md'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                }`}
+                        >
+                            {cat.name}
+                        </button>
+                    ))}
+                    {categories.length === 0 && (
+                        <p className="text-sm text-gray-400 italic">Nenhuma categoria criada.</p>
+                    )}
+                </div>
+            </div>
+
+            {/* Scripts Grid (Up to 6 columns) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-10">
+                {filteredScripts.length > 0 ? (
+                    filteredScripts.map((script) => (
+                        <div
+                            key={script.id}
+                            onClick={() => handleCopy(script.content)}
+                            className="bg-white border border-[#CCFBF1] rounded-xl overflow-hidden flex flex-col hover:shadow-lg transition-all cursor-pointer group relative select-none"
+                        >
+                            {/* Header (No Content Preview) */}
+                            <div className="bg-[#F0FDF9] p-4 border-b border-[#CCFBF1] flex-1 flex items-center justify-center text-center">
+                                <h4 className="font-bold text-sm text-[#115E59] uppercase leading-tight">
+                                    {script.title}
+                                </h4>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="bg-white p-3 flex items-center justify-between">
+                                {/* Order Number */}
+                                <div className="size-7 rounded-full border-2 border-[#115E59] text-[#115E59] flex items-center justify-center text-xs font-bold bg-white shrink-0">
+                                    {script.order}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="flex gap-1 text-gray-400">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleOpenScriptModal(script); }}
+                                            className="hover:text-[#115E59] p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                            title="Editar"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">edit_square</span>
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDeleteScript(script.id, e)}
+                                            className="hover:text-red-500 p-1.5 rounded hover:bg-gray-100 transition-colors"
+                                            title="Excluir"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setViewScript(script); }}
+                                        className="bg-[#115E59] hover:bg-[#0F504B] text-white text-[10px] font-bold uppercase px-3 py-1.5 rounded flex items-center gap-1 transition-colors shadow-sm"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">visibility</span>
+                                        Ver
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+                        <span className="material-symbols-outlined text-4xl mb-2 opacity-50">description</span>
+                        <p className="text-sm font-medium">Nenhum script encontrado nesta categoria.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* --- MODAL: CREATE / EDIT SCRIPT --- */}
+            {isScriptModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
+                        <div className="px-6 py-4 bg-primary-dark text-white border-b border-white/10 flex justify-between items-center">
+                            <h3 className="font-bold text-lg">
+                                {editingScript ? 'Editar Script' : 'Novo Script'}
+                            </h3>
+                            <button onClick={() => setIsScriptModalOpen(false)} className="text-white hover:text-gray-300">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className="col-span-3">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Categoria</label>
+                                    <select
+                                        value={scriptForm.categoryId}
+                                        onChange={(e) => setScriptForm({ ...scriptForm, categoryId: e.target.value })}
+                                        className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-primary outline-none bg-white"
+                                    >
+                                        {categories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Ordem</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={scriptForm.order}
+                                        onChange={(e) => setScriptForm({ ...scriptForm, order: parseInt(e.target.value) || 1 })}
+                                        className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-primary outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Título do Script *</label>
+                                <input
+                                    type="text"
+                                    value={scriptForm.title}
+                                    onChange={(e) => setScriptForm({ ...scriptForm, title: e.target.value.toUpperCase() })}
+                                    className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-primary outline-none"
+                                    placeholder="EX: ATENDIMENTO INICIAL"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Conteúdo da Mensagem *</label>
+                                <p className="text-[10px] text-gray-400 mb-1">Dica: Use <b>[MEU_NOME]</b> para o sistema inserir seu nome automaticamente ao copiar.</p>
+                                <textarea
+                                    value={scriptForm.content}
+                                    onChange={(e) => setScriptForm({ ...scriptForm, content: e.target.value })}
+                                    className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:border-primary outline-none min-h-[120px] resize-none"
+                                    placeholder="Ex: Olá! Eu sou [MEU_NOME] da Central de Agendamento..."
+                                />
+                            </div>
+
+                            <div className="pt-2 flex justify-end gap-2">
+                                <button
+                                    onClick={() => setIsScriptModalOpen(false)}
+                                    className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleSaveScript}
+                                    className="px-6 py-2 bg-primary-dark text-white font-bold rounded-lg hover:bg-[#0d504c] transition-colors"
+                                >
+                                    Salvar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL: MANAGE CATEGORIES --- */}
+            {isCategoryModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                        <div className="px-6 py-4 bg-primary-dark text-white border-b border-white/10 flex justify-between items-center">
+                            <h3 className="font-bold text-lg">Gerenciar Categorias</h3>
+                            <button onClick={() => setIsCategoryModalOpen(false)} className="text-white hover:text-gray-300">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            <div className="flex gap-2 mb-4">
+                                <input
+                                    type="text"
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                    placeholder={editingCategory ? "Editar nome da categoria..." : "Nova Categoria..."}
+                                    className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:border-primary outline-none uppercase"
+                                />
+                                {editingCategory ? (
+                                    <>
+                                        <button
+                                            onClick={handleSaveCategory}
+                                            disabled={!newCategoryName.trim()}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-3 rounded-lg disabled:bg-gray-300 transition-colors"
+                                            title="Salvar Edição"
+                                        >
+                                            <span className="material-symbols-outlined">check</span>
+                                        </button>
+                                        <button
+                                            onClick={handleCancelCategoryEdit}
+                                            className="bg-gray-400 hover:bg-gray-500 text-white px-3 rounded-lg transition-colors"
+                                            title="Cancelar Edição"
+                                        >
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={handleSaveCategory}
+                                        disabled={!newCategoryName.trim()}
+                                        className="bg-primary hover:bg-primary-dark text-white px-3 rounded-lg disabled:bg-gray-300 transition-colors"
+                                        title="Adicionar Categoria"
+                                    >
+                                        <span className="material-symbols-outlined">add</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                                {categories.map((cat) => (
+                                    <div key={cat.id} className={`flex justify-between items-center p-3 rounded-lg border transition-colors ${editingCategory?.id === cat.id ? 'bg-primary-light border-primary' : 'bg-gray-50 border-gray-100'
+                                        }`}>
+                                        <span className="text-sm font-bold text-gray-700 uppercase">{cat.name}</span>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => handleEditCategoryStart(cat)}
+                                                className="text-gray-400 hover:text-primary p-1 rounded hover:bg-white transition-colors"
+                                                title="Editar"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">edit</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteCategory(cat.id)}
+                                                className="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-white transition-colors"
+                                                title="Excluir"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL: VIEW / COPY SCRIPT --- */}
+            {viewScript && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col">
+                        <div className="px-6 py-4 bg-primary-dark text-white border-b border-white/10 flex justify-between items-start">
+                            <h3 className="font-bold text-xl uppercase leading-tight pr-4">
+                                {viewScript.title}
+                            </h3>
+                            <button onClick={() => setViewScript(null)} className="text-white hover:text-gray-300">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6 bg-gray-50 flex-1">
+                            <div className="mb-4">
+                                <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded uppercase">
+                                    Categoria: {categories.find(c => c.id === viewScript.categoryId)?.name}
+                                </span>
+                            </div>
+                            <div className="bg-white border border-gray-200 rounded-lg p-6 text-gray-800 text-lg leading-relaxed whitespace-pre-wrap shadow-sm">
+                                {viewScript.content.replace(/\[MEU_NOME\]/g, getUserShortName() || '[Seu Nome]')}
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-gray-100 flex gap-3">
+                            <button
+                                onClick={() => setViewScript(null)}
+                                className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Fechar
+                            </button>
+                            <button
+                                onClick={() => { handleCopy(viewScript.content); setViewScript(null); }}
+                                className="flex-1 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-lg transition-colors shadow-lg shadow-green-200 flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined">content_copy</span>
+                                Copiar Texto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        </div>
+    );
+};
+
+export default Scripts;

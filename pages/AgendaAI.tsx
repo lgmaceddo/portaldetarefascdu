@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { processDocument } from '../services/geminiService';
-import { ExtractedData, DocumentAnalysisResult, Preparation } from '../../types';
+import { processDocumentLocally } from '../services/localDocumentService';
+import { ExtractedData, DocumentAnalysisResult, Preparation } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AgendaAIProps {
@@ -323,38 +323,32 @@ ${signature}`;
                 if (prev >= 90) return prev;
                 return prev + Math.floor(Math.random() * 10);
             });
-        }, 500);
+        }, 300); // Faster progress for local
 
         try {
-            const base64 = await convertToBase64(file);
-            const mimeType = file.type;
-
             let prepText = '';
             if (selectedPrepId) {
                 const prep = preparations.find(p => p.id === selectedPrepId);
                 if (prep) prepText = prep.text;
             }
 
-            // Cast 'type' explicitly to match service expected inputs
-            const serviceType = (type === 'procedure_confirmation' ? 'confirmation' : type) as 'reschedule' | 'confirmation' | 'daily_summary';
+            // Cast type
+            const serviceType = (type === 'procedure_confirmation' ? 'confirmation' : type) as 'reschedule' | 'confirmation' | 'daily_summary' | 'procedure_confirmation';
 
-            // PASS USER NAME for personalized signature
-            const result = await processDocument(base64, mimeType, context, 'batch', serviceType, prepText, userSignatureName);
+            // Use Local Service with File Object
+            const result = await processDocumentLocally(file, serviceType, prepText, userSignatureName);
 
             clearInterval(progressInterval);
             setProgress(100);
 
             setTimeout(() => {
                 if (type === 'daily_summary') {
-                    // For daily summary, result is a single object (DocumentAnalysisResult)
                     if (!Array.isArray(result)) {
                         setIndividualResult(result as DocumentAnalysisResult);
                     } else if (result.length > 0) {
-                        // If by chance it returns array, take first
                         setIndividualResult(result[0]);
                     }
                 } else {
-                    // Standard batch mode
                     if (Array.isArray(result)) {
                         setBatchResults(result);
                         if (result.length > 0) setSelectedBatchIndex(0);
@@ -363,12 +357,12 @@ ${signature}`;
                 setLoading(false);
             }, 500);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             clearInterval(progressInterval);
             setLoading(false);
             setProgress(0);
-            alert("Erro ao processar arquivo. Tente novamente.");
+            alert(`Erro ao processar arquivo: ${error.message || 'Erro desconhecido'}`);
         }
     };
 
@@ -606,8 +600,8 @@ ${signature}`;
                                         onClick={generateManualMessage}
                                         disabled={!isManualFormValid || loading}
                                         className={`w-full py-2.5 font-bold text-sm text-white transition-all flex items-center justify-center gap-2 rounded-lg ${!isManualFormValid || loading
-                                                ? 'bg-gray-300 cursor-not-allowed'
-                                                : 'bg-primary hover:bg-primary-dark'
+                                            ? 'bg-gray-300 cursor-not-allowed'
+                                            : 'bg-primary hover:bg-primary-dark'
                                             }`}
                                     >
                                         {loading ? 'Gerando...' : 'Gerar Mensagem'}
@@ -622,8 +616,8 @@ ${signature}`;
                                 {/* Upload Box */}
                                 <div
                                     className={`relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${file
-                                            ? 'border-primary bg-primary-light/20'
-                                            : 'border-gray-300 hover:border-primary hover:bg-gray-50'
+                                        ? 'border-primary bg-primary-light/20'
+                                        : 'border-gray-300 hover:border-primary hover:bg-gray-50'
                                         }`}
                                     onClick={() => !loading && fileInputRef.current?.click()}
                                 >
@@ -1030,8 +1024,8 @@ ${signature}`;
                                             onClick={handleSavePreparation}
                                             disabled={!newPrep.title.trim() || !newPrep.text.trim()}
                                             className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 ${newPrep.title.trim() && newPrep.text.trim()
-                                                    ? (editingPrepId ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-primary text-white hover:bg-primary-dark')
-                                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                ? (editingPrepId ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-primary text-white hover:bg-primary-dark')
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-base">{editingPrepId ? 'save' : 'add'}</span>
@@ -1058,8 +1052,8 @@ ${signature}`;
                                             <div
                                                 key={prep.id}
                                                 className={`flex items-center justify-between p-3 border rounded-lg transition-all group ${editingPrepId === prep.id
-                                                        ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-300'
-                                                        : 'border-gray-200 hover:border-primary/50 hover:shadow-sm bg-white'
+                                                    ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-300'
+                                                    : 'border-gray-200 hover:border-primary/50 hover:shadow-sm bg-white'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-3 overflow-hidden">
@@ -1082,8 +1076,8 @@ ${signature}`;
                                                     <button
                                                         onClick={() => handleEditPreparation(prep)}
                                                         className={`p-1.5 rounded transition-colors ${editingPrepId === prep.id
-                                                                ? 'text-blue-600 bg-blue-100'
-                                                                : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                                                            ? 'text-blue-600 bg-blue-100'
+                                                            : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                                                             }`}
                                                         title="Editar"
                                                     >

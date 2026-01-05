@@ -1,8 +1,24 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { DocumentAnalysisResult } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+// Access API Key from environment
+// We check multiple sources to be robust across different Vite configurations
+const apiKey = (
+  import.meta.env.VITE_GEMINI_API_KEY ||
+  import.meta.env.GEMINI_API_KEY ||
+  process.env.GEMINI_API_KEY ||
+  process.env.API_KEY ||
+  ''
+).trim();
+
+if (!apiKey) {
+  console.error("Gemini API Key is missing. Check your .env file (VITE_GEMINI_API_KEY) or vite.config.ts");
+} else {
+  // Log masked key for debugging assurance
+  console.log(`Gemini Service initialized with Key: ${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`);
+}
+
+const genAI = new GoogleGenerativeAI(apiKey);
 
 /**
  * Parses a file (PDF or Image) to extract structured data and generate a message.
@@ -17,15 +33,16 @@ export const processDocument = async (
   mode: 'individual' | 'batch' = 'individual',
   type: 'reschedule' | 'confirmation' | 'daily_summary' = 'reschedule',
   preparationText?: string,
-  userName?: string // New parameter for automatic name insertion
+  userName?: string
 ): Promise<DocumentAnalysisResult | DocumentAnalysisResult[]> => {
   try {
-    const model = 'gemini-3-flash-preview';
+    if (!apiKey) {
+      throw new Error("Chave de API do Gemini não encontrada. Verifique a configuração.");
+    }
 
-    // Default signature logic: If userName exists, use it. If not, use "Atendimento Unimed".
     const signatureName = userName || "Atendimento Unimed";
 
-    // 1. DAILY SUMMARY LOGIC (Specific branch)
+    // --- DAILY SUMMARY LOGIC (Specific branch) ---
     if (type === 'daily_summary') {
       const prompt = `
             Você é um assistente administrativo de uma clínica médica.
@@ -89,52 +106,52 @@ export const processDocument = async (
             ---
         `;
 
-      const responseSchema: Schema = {
-        type: Type.OBJECT,
-        properties: {
-          extractedData: {
-            type: Type.OBJECT,
-            properties: {
-              patientName: { type: Type.STRING, description: "Use 'Resumo Diário' aqui" },
-              doctorName: { type: Type.STRING },
-              date: { type: Type.STRING },
-              time: { type: Type.STRING, description: "Use o período completo aqui" },
-              contact: { type: Type.STRING, description: "Deixe vazio" },
-              procedure: { type: Type.STRING, description: "Deixe vazio" },
-            }
-          },
-          generatedMessage: { type: Type.STRING, description: "O texto do resumo completo formatado." }
-        },
-        required: ["extractedData", "generatedMessage"]
-      };
-
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: {
-          parts: [
-            { inlineData: { mimeType: mimeType, data: fileBase64 } },
-            { text: prompt },
-          ],
-        },
-        config: {
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        generationConfig: {
           responseMimeType: "application/json",
-          responseSchema: responseSchema,
-        },
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              extractedData: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  patientName: { type: SchemaType.STRING, description: "Use 'Resumo Diário' aqui" },
+                  doctorName: { type: SchemaType.STRING },
+                  date: { type: SchemaType.STRING },
+                  time: { type: SchemaType.STRING, description: "Use o período completo aqui" },
+                  contact: { type: SchemaType.STRING, description: "Deixe vazio" },
+                  procedure: { type: SchemaType.STRING, description: "Deixe vazio" },
+                }
+              },
+              generatedMessage: { type: SchemaType.STRING, description: "O texto do resumo completo formatado." }
+            },
+            required: ["extractedData", "generatedMessage"]
+          }
+        }
       });
 
-      const text = response.text;
+      const result = await model.generateContent([
+        { inlineData: { mimeType: mimeType, data: fileBase64 } },
+        { text: prompt }
+      ]);
+
+      const response = await result.response;
+      const text = response.text();
+
       if (!text) throw new Error("No response generated.");
-      return JSON.parse(text);
+
+      const cleanText = text.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+      return JSON.parse(cleanText);
     }
 
-    // 2. STANDARD LOGIC (Reschedule / Confirmation)
+    // --- STANDARD LOGIC (Reschedule / Confirmation) ---
 
     // Format preparation block if exists
     const prepBlock = preparationText
       ? `\n📝 *Preparo Necessário:*\n${preparationText}\n`
       : '';
 
-    // Define templates with placeholders for preparation and dynamic user name
     const templates = {
       reschedule: `
           Olá, "nome do paciente", este contato refere-se à sua consulta no Centro de Diagnóstico Unimed (CDU), 9º andar. Tentamos o contato telefônico, mas não conseguimos falar com você.
@@ -173,7 +190,6 @@ Atenciosamente,
 ${signatureName}`
     };
 
-    // Note: Daily Summary template is handled in the if block above, so we cast type strictly here for templates access
     const selectedTemplate = templates[type as 'reschedule' | 'confirmation'];
 
     const mappingInstructions = `
@@ -187,24 +203,24 @@ ${signatureName}`
     `;
 
     let prompt = '';
-    let responseSchema: Schema;
+    let responseSchema: any;
 
-    const itemSchema: Schema = {
-      type: Type.OBJECT,
+    const itemSchema = {
+      type: SchemaType.OBJECT,
       properties: {
         extractedData: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
-            patientName: { type: Type.STRING, description: "Nome completo do paciente" },
-            doctorName: { type: Type.STRING, description: "Nome do médico" },
-            date: { type: Type.STRING, description: "Data do agendamento" },
-            time: { type: Type.STRING, description: "Horário de início" },
-            procedure: { type: Type.STRING, description: "Tipo do evento" },
-            contact: { type: Type.STRING, description: "Telefone de contato" },
+            patientName: { type: SchemaType.STRING, description: "Nome completo do paciente" },
+            doctorName: { type: SchemaType.STRING, description: "Nome do médico" },
+            date: { type: SchemaType.STRING, description: "Data do agendamento" },
+            time: { type: SchemaType.STRING, description: "Horário de início" },
+            procedure: { type: SchemaType.STRING, description: "Tipo do evento" },
+            contact: { type: SchemaType.STRING, description: "Telefone de contato" },
           },
         },
         generatedMessage: {
-          type: Type.STRING,
+          type: SchemaType.STRING,
           description: "A mensagem formatada exatamente conforme o modelo."
         },
       },
@@ -225,7 +241,7 @@ ${signatureName}`
         `;
 
       responseSchema = {
-        type: Type.ARRAY,
+        type: SchemaType.ARRAY,
         items: itemSchema
       };
     } else {
@@ -242,32 +258,36 @@ ${signatureName}`
         `;
 
       responseSchema = {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: itemSchema.properties,
         required: itemSchema.required
       };
     }
 
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: {
-        parts: [
-          { inlineData: { mimeType: mimeType, data: fileBase64 } },
-          { text: prompt },
-        ],
-      },
-      config: {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: responseSchema,
-      },
+        responseSchema: responseSchema
+      }
     });
 
-    const text = response.text;
+    const result = await model.generateContent([
+      { inlineData: { mimeType: mimeType, data: fileBase64 } },
+      { text: prompt }
+    ]);
+
+    const response = await result.response;
+    const text = response.text();
+
     if (!text) throw new Error("No response generated.");
 
-    return JSON.parse(text);
-  } catch (error) {
+    const cleanText = text.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+    return JSON.parse(cleanText);
+
+  } catch (error: any) {
     console.error("Error processing document:", error);
-    throw new Error("Falha ao processar o documento.");
+    // Explicitly throw the error message
+    throw new Error(error.message || "Falha ao processar o documento.");
   }
 };

@@ -13,9 +13,8 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Define menu structure with requested order
+  // Define menu structure
   const allNavItems: NavItem[] = [
-    { name: 'Dashboard', icon: 'dashboard', path: '/' },
     {
       name: 'Agenda',
       icon: 'calendar_month',
@@ -33,6 +32,7 @@ const Sidebar: React.FC = () => {
     { name: 'Equipe Recepção', icon: 'groups', path: '/recepcao' },
     { name: 'Profissionais', icon: 'manage_accounts', path: '/profissionais' },
     { name: 'Usuários', icon: 'admin_panel_settings', path: '/usuarios' },
+    { name: 'Dashboard', icon: 'dashboard', path: '/' },
     { name: 'Configurações', icon: 'settings', path: '/configuracoes' },
   ];
 
@@ -43,9 +43,9 @@ const Sidebar: React.FC = () => {
       return ['Dashboard', 'Tarefas', 'Recados'].includes(item.name);
     }
 
-    // Reception View: Hide Dashboard, show everything else
+    // Reception View: Show everything (Dashboard is already in allNavItems at the specific position)
     if (user?.role === 'reception') {
-      return item.name !== 'Dashboard';
+      return true;
     }
 
     return true;
@@ -56,11 +56,10 @@ const Sidebar: React.FC = () => {
   );
 
   const toggleMenu = (name: string) => {
-    // Accordion behavior: Only allow one open at a time
     setExpandedMenus(prev =>
       prev.includes(name)
-        ? [] // If clicking the currently open one, close it
-        : [name] // If clicking a new one, open it (this automatically closes others by replacing the array)
+        ? []
+        : [name]
     );
   };
 
@@ -70,7 +69,6 @@ const Sidebar: React.FC = () => {
         {navItems.map((item) => (
           <div key={item.name}>
             {item.subItems ? (
-              // Parent Item (Collapsible)
               <>
                 <button
                   onClick={() => toggleMenu(item.name)}
@@ -89,7 +87,6 @@ const Sidebar: React.FC = () => {
                   </span>
                 </button>
 
-                {/* Sub-items Container */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedMenus.includes(item.name) ? 'max-h-52 opacity-100 mt-1' : 'max-h-0 opacity-0'
                   }`}>
                   <div className="flex flex-col gap-1 pl-0 lg:pl-3 relative ml-2 border-l-2 border-gray-100">
@@ -114,10 +111,9 @@ const Sidebar: React.FC = () => {
                 </div>
               </>
             ) : (
-              // Standard Link Item
               <NavLink
                 to={item.path!}
-                onClick={() => setExpandedMenus([])} // Close any open accordion when navigating to a root item
+                onClick={() => setExpandedMenus([])}
                 className={({ isActive }) =>
                   `flex items-center px-3 py-2.5 rounded-lg transition-colors text-base font-bold ${isActive
                     ? 'bg-primary-light text-primary-dark shadow-sm'
@@ -133,7 +129,6 @@ const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      {/* --- Sidebar Bottom Logo (Fixed outside scroll area) --- */}
       <div className="pt-4 pb-2 px-2 flex flex-col items-center gap-4 shrink-0">
         <div className="w-full h-px bg-gray-100"></div>
         <img

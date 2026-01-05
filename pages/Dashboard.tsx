@@ -9,6 +9,9 @@ interface DashboardStats {
     highPriorityTasks: number;
     pendingNotes: number;
     urgentNotes: number;
+    morningDoctors: number;
+    afternoonDoctors: number;
+    totalDoctors: number;
 }
 
 const Dashboard: React.FC = () => {
@@ -19,7 +22,10 @@ const Dashboard: React.FC = () => {
         pendingTasks: 0,
         highPriorityTasks: 0,
         pendingNotes: 0,
-        urgentNotes: 0
+        urgentNotes: 0,
+        morningDoctors: 0,
+        afternoonDoctors: 0,
+        totalDoctors: 0
     });
     const [myAllocations, setMyAllocations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,7 +61,13 @@ const Dashboard: React.FC = () => {
             setRooms(combinedRooms);
             setAllocations(combinedAllocs);
 
-            // Calculate Stats based on Profile
+            // Calculate Doctor Stats (Global for the day)
+            const dayAllAllocs = combinedAllocs.filter(a => a.date === todayDateKey);
+            const morningDocs = new Set(dayAllAllocs.filter(a => (a.shift?.toLowerCase() === 'morning' || a.shift === 'Manhã')).map(a => a.doctor_id || a.doctorId)).size;
+            const afternoonDocs = new Set(dayAllAllocs.filter(a => (a.shift?.toLowerCase() === 'afternoon' || a.shift === 'Tarde')).map(a => a.doctor_id || a.doctorId)).size;
+            const totalDocs = new Set(dayAllAllocs.map(a => a.doctor_id || a.doctorId)).size;
+
+            // Calculate Individual Stats based on Profile
             if (user?.role === 'doctor') {
                 const myPendingTasks = savedTasks.filter(t => t.assignedTo === user.id && t.status !== TaskStatus.DONE);
                 const myPendingNotes = savedNotes.filter(n => n.to === user.id && n.status !== 'completed');
@@ -64,7 +76,10 @@ const Dashboard: React.FC = () => {
                     pendingTasks: myPendingTasks.length,
                     highPriorityTasks: myPendingTasks.filter(t => t.priority === Priority.HIGH).length,
                     pendingNotes: myPendingNotes.length,
-                    urgentNotes: myPendingNotes.filter(n => n.category === 'urgent').length
+                    urgentNotes: myPendingNotes.filter(n => n.category === 'urgent').length,
+                    morningDoctors: morningDocs,
+                    afternoonDoctors: afternoonDocs,
+                    totalDoctors: totalDocs
                 });
 
                 const dayAllocs = combinedAllocs.filter(a => {
@@ -94,7 +109,10 @@ const Dashboard: React.FC = () => {
                     pendingTasks: allPendingTasks.length,
                     highPriorityTasks: allPendingTasks.filter(t => t.priority === Priority.HIGH).length,
                     pendingNotes: allPendingNotes.length,
-                    urgentNotes: allPendingNotes.filter(n => n.category === 'urgent').length
+                    urgentNotes: allPendingNotes.filter(n => n.category === 'urgent').length,
+                    morningDoctors: morningDocs,
+                    afternoonDoctors: afternoonDocs,
+                    totalDoctors: totalDocs
                 });
             }
 
@@ -107,7 +125,7 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         fetchRealtimeData();
-        const channel = supabase.channel('dashboard_green_changes')
+        const channel = supabase.channel('dashboard_restore_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_map_allocations' }, () => fetchRealtimeData())
             .subscribe();
         return () => { supabase.removeChannel(channel); };
@@ -174,9 +192,8 @@ const Dashboard: React.FC = () => {
             {/* --- Hero Section: Allocation & Stats --- */}
             <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden flex flex-col lg:flex-row min-h-[400px]">
 
-                {/* Left Panel: Status Summary (The Requested Dark/Green Area) */}
+                {/* Left Panel: Status Summary */}
                 <div className="lg:w-1/3 bg-[#004729] p-10 flex flex-col justify-between text-white relative overflow-hidden">
-                    {/* Visual decor */}
                     <div className="absolute -right-16 -bottom-16 opacity-5 rotate-12">
                         <span className="material-symbols-outlined text-[20rem]">medical_information</span>
                     </div>
@@ -189,13 +206,16 @@ const Dashboard: React.FC = () => {
                             Status do Dia
                         </h3>
                         <p className="text-gray-300 font-medium text-lg leading-relaxed mb-10">
-                            {myAllocations.length > 0
-                                ? `Você possui ${myAllocations.length} ${myAllocations.length === 1 ? 'sala designada' : 'salas designadas'} para atendimento hoje.`
-                                : 'Sua escala está sendo finalizada pela recepção central.'}
+                            {user?.role === 'doctor' ? (
+                                myAllocations.length > 0
+                                    ? `Você possui ${myAllocations.length} ${myAllocations.length === 1 ? 'sala designada' : 'salas designadas'} para atendimento hoje.`
+                                    : 'Sua escala está sendo finalizada pela recepção central.'
+                            ) : (
+                                'Acompanhe a ocupação das salas e gerencie as pendências do setor em tempo real.'
+                            )}
                         </p>
 
-                        {/* RESUMO DE TAREFAS E RECADOS - Integrated Quantities */}
-                        <div className="grid grid-cols-2 gap-4 mt-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-auto">
                             <NavLink to="/tarefas" className="bg-[#005F37] hover:bg-[#007D49] transition-all p-5 rounded-[2rem] border border-white/5 flex flex-col gap-1 items-start group">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="material-symbols-outlined text-sm text-[#00E68A]">assignment</span>
@@ -216,6 +236,29 @@ const Dashboard: React.FC = () => {
                                     <span className="text-xs font-bold text-white/50">{stats.urgentNotes > 0 ? `(${stats.urgentNotes} urg.)` : 'novos'}</span>
                                 </div>
                             </NavLink>
+                            {/* NEW: Médicos Summary */}
+                            <NavLink to="/profissionais" className="bg-[#005F37] hover:bg-[#007D49] transition-all p-5 rounded-[2rem] border border-white/5 flex flex-col gap-1 items-start group sm:col-span-2">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="material-symbols-outlined text-sm text-[#00E68A]">groups</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#00E68A]">Corpo Clínico (Hoje)</span>
+                                </div>
+                                <div className="flex w-full items-center justify-between">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-3xl font-black tracking-tighter">{stats.totalDoctors}</span>
+                                        <span className="text-xs font-bold text-white/50">médicos total</span>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[8px] font-black text-[#00E68A] uppercase tracking-tighter">Manhã</span>
+                                            <span className="text-lg font-black leading-none">{stats.morningDoctors}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[8px] font-black text-[#00E68A] uppercase tracking-tighter">Tarde</span>
+                                            <span className="text-lg font-black leading-none">{stats.afternoonDoctors}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </NavLink>
                         </div>
                     </div>
 
@@ -225,10 +268,9 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Right Panel: Detailed Allocations (Doctor) or Room Grid (Reception) */}
+                {/* Right Panel: Detailed Allocations */}
                 <div className="lg:w-2/3 p-10 flex flex-col justify-center bg-gray-50/30">
                     {user?.role === 'doctor' ? (
-                        /* DOCTOR VIEW: LIST OF ROOMS */
                         <div className="space-y-6">
                             <div className="mb-4">
                                 <h4 className="text-xs font-black text-[#00995D] uppercase tracking-[0.2em] mb-1">Mapa de Atendimento</h4>
@@ -282,7 +324,6 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        /* RECEPTION VIEW: ROOM OVERVIEW */
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4">
                                 <div>
@@ -329,7 +370,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Subtle Footer */}
-            <div className="flex justify-between items-center px-6 opacity-30">
+            <div className="flex justify-between items-center px-6 opacity-30 mt-auto pt-4">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em]">MediPortal Unimed v2.0</p>
                 <div className="flex gap-4">
                     <span className="size-1 bg-[#00995D] rounded-full"></span>

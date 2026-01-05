@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChatMessage, Doctor, Receptionist } from '../../types';
+import { ChatMessage, Doctor, Receptionist } from '../types';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -409,8 +409,8 @@ const Chat: React.FC<ChatProps> = ({ isWidget = false }) => {
                                 key={tab.id}
                                 onClick={() => setActiveFilter(tab.id)}
                                 className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-colors border ${activeFilter === tab.id
-                                        ? 'bg-[#e7fce3] text-[#008069] border-transparent'
-                                        : 'bg-[#f0f2f5] text-gray-500 border-transparent hover:bg-gray-200'
+                                    ? 'bg-[#e7fce3] text-[#008069] border-transparent'
+                                    : 'bg-[#f0f2f5] text-gray-500 border-transparent hover:bg-gray-200'
                                     }`}
                             >
                                 {tab.label}
@@ -428,8 +428,8 @@ const Chat: React.FC<ChatProps> = ({ isWidget = false }) => {
                                     key={contact.id}
                                     onClick={() => handleContactClick(contact)}
                                     className={`px-3 py-3 flex items-center gap-3 cursor-pointer transition-all hover:bg-[#f5f6f6] relative group ${selectedContact?.id === contact.id
-                                            ? 'bg-[#f0f2f5]'
-                                            : 'bg-white'
+                                        ? 'bg-[#f0f2f5]'
+                                        : 'bg-white'
                                         }`}
                                 >
                                     <div className="relative size-12 flex-shrink-0">
@@ -545,8 +545,8 @@ const Chat: React.FC<ChatProps> = ({ isWidget = false }) => {
                                     return (
                                         <div key={msg.id} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'} ${isSequence ? 'mt-0.5' : 'mt-2'} group`}>
                                             <div className={`relative max-w-[85%] md:max-w-[65%] rounded-lg shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] text-sm leading-relaxed ${msg.isMe
-                                                    ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none'
-                                                    : 'bg-white text-[#111b21] rounded-tl-none'
+                                                ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none'
+                                                : 'bg-white text-[#111b21] rounded-tl-none'
                                                 }`}>
 
                                                 {/* Message Options Arrow (Visible on hover) */}
@@ -713,8 +713,8 @@ const Chat: React.FC<ChatProps> = ({ isWidget = false }) => {
                             <button
                                 onClick={handleSend}
                                 className={`p-2 rounded-full flex items-center justify-center transition-all ${input.trim() || attachment
-                                        ? 'text-primary hover:bg-gray-200'
-                                        : 'text-[#54656f] hover:bg-gray-200'
+                                    ? 'text-primary hover:bg-gray-200'
+                                    : 'text-[#54656f] hover:bg-gray-200'
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-2xl">

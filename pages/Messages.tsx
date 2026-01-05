@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Note, Doctor, Receptionist, NoteHistory, NoteStatus } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
+import { useNotification } from '../contexts/NotificationContext';
 
 // Combined Recipient type for dropdown
 interface Recipient {
@@ -14,6 +15,7 @@ interface Recipient {
 
 const Messages: React.FC = () => {
     const { user } = useAuth();
+    const { playNotificationSound } = useNotification();
 
     // --- State ---
     const [notes, setNotes] = useState<Note[]>(() => {
@@ -238,6 +240,7 @@ const Messages: React.FC = () => {
         }));
         setRecipientSearch('');
         setAttachmentFile(null);
+        playNotificationSound();
     };
 
     const openInteractionModal = (noteId: string, type: 'reply' | 'return', e?: React.MouseEvent) => {

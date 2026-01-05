@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
-import { Doctor, Receptionist } from '../../types';
+import { Doctor, Receptionist } from '../types';
 
 // We keep these for reference if needed, but Supabase is the source of truth now.
 // List of common specialties for suggestions

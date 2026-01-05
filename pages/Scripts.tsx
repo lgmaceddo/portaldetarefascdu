@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Script, ScriptCategory } from '../../types';
+import { Script, ScriptCategory } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 // Mock Data for Categories
@@ -307,8 +307,8 @@ const Scripts: React.FC = () => {
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`px-4 py-2 rounded-full text-sm font-bold uppercase whitespace-nowrap transition-all border ${selectedCategory === cat.id
-                                    ? 'bg-primary text-white border-primary shadow-md'
-                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                ? 'bg-primary text-white border-primary shadow-md'
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
                             {cat.name}
